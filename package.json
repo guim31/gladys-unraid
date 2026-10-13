@@ -1,6 +1,6 @@
 {
   "name": "gladys-unraid",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Gladys Assistant integration for Unraid: array, parity, disks, Docker containers, VMs, UPS and notifications.",
   "type": "module",
