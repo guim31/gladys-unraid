@@ -28,8 +28,24 @@ Gladys before reporting a problem.
 
 ## Scope
 
-In scope: the code of this repository and the Docker image it publishes.
+In scope: the code of this repository and the Docker image it publishes. In
+particular:
+
+- the **Unraid API key**, kept by Gladys in the integration configuration
+  (a secret field), sent only in the `x-api-key` header to the configured
+  server, or to the HTTPS address Unraid itself redirects to (the same host,
+  or `*.myunraid.net`), and never logged;
+- the commands the integration can send: start, stop and restart a Docker
+  container, start and shut down a virtual machine. Nothing on the array, the
+  parity or the server itself. Giving the key the Viewer role only keeps
+  Gladys read only;
+- what is stored in `/data` (`unraid-state.json`): disk states and
+  temperature steps already announced, container names seen running, the
+  parity operation in progress, the ids of the Unraid notifications already
+  announced, and the features each device had. No secret;
+- the network: the integration only connects to the Unraid server of the
+  configuration, on the local network.
 
 Out of scope: Gladys Assistant itself (see its
 [security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
-and the third-party services and devices the integration talks to.
+and Unraid and the services it runs.
