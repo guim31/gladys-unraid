@@ -10,6 +10,11 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Changed
+
+- Documentation: the integration has now been tested on a real Unraid server,
+  where everything works.
+
 ## [1.0.0] - 2026-10-13
 
 ### Added

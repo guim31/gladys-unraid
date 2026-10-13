@@ -11,8 +11,8 @@ veröffentlicht; sie können einen Container oder eine VM starten, stoppen oder
 neu starten. Ein Widget fasst den Server auf dem Dashboard zusammen. Alles
 bleibt in deinem lokalen Netzwerk.
 
-**Entwickelt ohne Zugriff auf einen echten Unraid-Server**: aufgebaut auf dem
-offiziellen API-Schema und gegen einen simulierten Server getestet. Feedback ist
+**Auf einem echten Unraid-Server getestet** vom Autor, zusätzlich zu den
+automatischen Tests gegen einen simulierten Server. Feedback ist
 willkommen in [den Issues](https://github.com/guim31/gladys-unraid/issues).
 
 ## Was du brauchst
