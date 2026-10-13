@@ -1,169 +1,378 @@
 // -----------------------------------------------------------------------------
-// Dashboard widgets (SDK v0.14+, Gladys 5.1+).
+// Dashboard widget (manifest `widgets`, Gladys 5.1+): `unraid`.
 //
-// A widget puts the integration's own data on the Gladys dashboard without a
-// dedicated core widget. The manifest `widgets` field declares its identity
-// (key, label, icon, optional per-instance `settings`); at runtime the
-// integration returns a DECLARATIVE content — `text`, `value`, `gauge`,
-// `status`, `chart`, `card-list`, `image`, `button` — that the core renders
-// with its own theme, dark mode and translations. No HTML, no CSS.
+// The use case: a glance at the server from the wall tablet, "is everything
+// fine?": the array, the parity, the disks that need attention, the
+// containers that should run and do not, the UPS, the unread alerts. And,
+// for the container or VM chosen in the widget settings, the buttons that
+// start, stop or restart it (stop and restart ask for a confirmation).
 //
-// Each entry of WIDGETS is keyed by the widget `key` and exposes:
-//   - get(gladys, { settings, language, units, config }): the content,
-//     registered by index.js with `gladys.onWidgetGet(key, ...)`;
-//   - action(gladys, { actionKey, params, settings, config }) (optional): a
-//     tapped `button` carrying an `action`, registered with
-//     `gladys.onWidgetAction`.
-//
-// Check your contents in the tests with `validateWidgetContent` (exported by
-// the SDK, see test/widgets.test.js), or run with DEBUG=gladys-integration-sdk
-// to have the SDK log every violation of the vocabulary and the budget.
+// Budget (8 components, 2 texts, 6 tiles, 1 status, 4 buttons): a heading
+// (server and version), three tiles (CPU, memory, array space), one status
+// list (up to 10 rows, the problems first) and up to three buttons. The
+// figures are sent as values, not bound to device features, so the widget
+// works before any device is added to Gladys.
 // -----------------------------------------------------------------------------
 
+import { WIDGET_COLORS } from '@gladysassistant/integration-sdk';
+import { DEVICE_TYPES } from './devices.js';
+import { WIDGET_KEY } from './hub.js';
+import { diskProblem } from './unraid/model.js';
 import {
-  createLogger,
-  DEVICE_FEATURE_CATEGORIES,
-  DEVICE_TRANSPORTS,
-  WIDGET_COLORS,
-} from '@gladysassistant/integration-sdk';
-import { identifyDevice } from './devices/index.js';
-import { weatherStation } from './devices/weatherStation.js';
-import { plug } from './devices/plug.js';
-import { light } from './devices/light.js';
+  DONE_TEXT,
+  ERROR_TEXT,
+  arrayStatusText,
+  diskStatusText,
+  formatNumber,
+  labelled,
+  pick,
+} from './texts.js';
 
-const logger = createLogger({ name: 'widgets' });
+// Action keys of the buttons: permanent once published (unique, the core
+// drops a button whose key is taken).
+export const ACTIONS = Object.freeze({
+  START: 'start',
+  STOP: 'stop',
+  RESTART: 'restart',
+  REFRESH: 'refresh',
+});
 
-// Widget key, as declared in the manifest `widgets` field.
-export const DEMO_STATUS_WIDGET = 'demo_status';
+// A disk at or above this temperature shows in the list.
+export const WARM_DISK_CELSIUS = 50;
+const MAX_ROWS = 10;
+const ACTIVE_ICON = 'check-circle';
 
-// Keys of the `button` actions the demo_status content declares.
-const DEMO_STATUS_ACTIONS = { IDENTIFY_LIGHT: 'identify_light' };
-
-// How the plug transport reads in the status list.
-const TRANSPORT_STATUS = {
-  [DEVICE_TRANSPORTS.LOCAL]: { value: { en: 'Local', fr: 'Locale' }, color: WIDGET_COLORS.SUCCESS },
-  [DEVICE_TRANSPORTS.CLOUD]: { value: { en: 'Cloud', fr: 'Cloud' }, color: WIDGET_COLORS.INFO },
-  [DEVICE_TRANSPORTS.UNREACHABLE]: {
-    value: { en: 'Unreachable', fr: 'Injoignable' },
-    color: WIDGET_COLORS.DANGER,
+export const TEXT = {
+  pick: {
+    en: 'Enter the address of your Unraid server and an API key in the configuration of the integration.',
+    fr: "Saisissez l'adresse de votre serveur Unraid et une clé d'API dans la configuration de l'intégration.",
+    de: 'Gib die Adresse deines Unraid-Servers und einen API-Schlüssel in der Konfiguration der Integration ein.',
+    es: 'Introduzca la dirección de su servidor Unraid y una clave de API en la configuración de la integración.',
   },
+  waiting: {
+    en: 'Reading the Unraid server…',
+    fr: 'Lecture du serveur Unraid…',
+    de: 'Der Unraid-Server wird gelesen …',
+    es: 'Leyendo el servidor Unraid…',
+  },
+  cpu: { en: 'CPU', fr: 'Processeur', de: 'Prozessor', es: 'Procesador' },
+  memory: { en: 'Memory', fr: 'Mémoire', de: 'Speicher', es: 'Memoria' },
+  arrayUsed: { en: 'Array used', fr: 'Matrice utilisée', de: 'Array belegt', es: 'Array usado' },
+  array: { en: 'Array', fr: 'Matrice', de: 'Array', es: 'Array' },
+  parity: {
+    en: 'Last parity check',
+    fr: 'Dernier contrôle de parité',
+    de: 'Letzte Paritätsprüfung',
+    es: 'Última comprobación',
+  },
+  noError: { en: 'No error', fr: 'Aucune erreur', de: 'Keine Fehler', es: 'Sin errores' },
+  errors: { en: 'errors', fr: 'erreurs', de: 'Fehler', es: 'errores' },
+  disks: { en: 'Disks', fr: 'Disques', de: 'Festplatten', es: 'Discos' },
+  disksOk: { en: 'OK', fr: 'OK', de: 'OK', es: 'OK' },
+  asleep: { en: 'asleep', fr: 'en veille', de: 'im Standby', es: 'en reposo' },
+  used: { en: 'used', fr: 'utilisé', de: 'belegt', es: 'usado' },
+  cpuTemperature: {
+    en: 'CPU temperature',
+    fr: 'Température processeur',
+    de: 'Prozessortemperatur',
+    es: 'Temperatura del procesador',
+  },
+  containers: { en: 'Containers', fr: 'Conteneurs', de: 'Container', es: 'Contenedores' },
+  stoppedAuto: {
+    en: 'Stopped (autostart)',
+    fr: 'Arrêtés (démarrage auto)',
+    de: 'Gestoppt (Autostart)',
+    es: 'Detenidos (inicio auto)',
+  },
+  running: { en: 'running', fr: 'en marche', de: 'laufen', es: 'en marcha' },
+  vms: { en: 'VMs', fr: 'VM', de: 'VMs', es: 'VM' },
+  onMains: { en: 'On mains', fr: 'Sur secteur', de: 'Am Netz', es: 'En red' },
+  onBattery: { en: 'On battery', fr: 'Sur batterie', de: 'Im Akkubetrieb', es: 'Con batería' },
+  alerts: {
+    en: 'Unread alerts',
+    fr: 'Alertes non lues',
+    de: 'Ungelesene Warnungen',
+    es: 'Alertas sin leer',
+  },
+  updates: {
+    en: 'Container updates',
+    fr: 'Mises à jour conteneurs',
+    de: 'Container-Updates',
+    es: 'Actualizaciones',
+  },
+  offline: { en: 'Unreachable', fr: 'Injoignable', de: 'Nicht erreichbar', es: 'Inaccesible' },
+  start: { en: 'Start', fr: 'Démarrer', de: 'Starten', es: 'Iniciar' },
+  stop: { en: 'Stop', fr: 'Arrêter', de: 'Stoppen', es: 'Detener' },
+  restart: { en: 'Restart', fr: 'Redémarrer', de: 'Neu starten', es: 'Reiniciar' },
+  refresh: { en: 'Refresh', fr: 'Actualiser', de: 'Aktualisieren', es: 'Actualizar' },
 };
 
-// A live tile references a feature by its external_id: read it from the
-// discovery payload itself, so the widget and the device never disagree.
-function featureExternalId(gladys, config, blueprint, category) {
-  const device = blueprint.buildDevice(gladys, config);
-  return device.features.find((feature) => feature.category === category).external_id;
+const t = (text, language) => pick(text, language);
+const fit = (text, max) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text);
+
+function message(text, language) {
+  return {
+    ttl_seconds: 60,
+    components: [{ type: 'text', variant: 'body', text: fit(t(text, language), 300) }],
+  };
 }
 
-function plugConnectionStatus(gladys, config) {
-  const { transport, degraded } = plug.transport(gladys, config);
-  const { value, color } = TRANSPORT_STATUS[transport];
-  if (degraded) {
-    return {
-      value: { en: `${value.en} (degraded mode)`, fr: `${value.fr} (mode dégradé)` },
+const refreshButton = (language) => ({
+  type: 'button',
+  label: t(TEXT.refresh, language),
+  icon: 'refresh-cw',
+  style: 'secondary',
+  action: { key: ACTIONS.REFRESH },
+});
+
+/** The status rows: the problems first, then the summary of each part. */
+export function rows(snapshot, language) {
+  const problems = [];
+  const summary = [];
+  const { array, parity, disks } = snapshot;
+
+  summary.push({
+    label: t(TEXT.array, language),
+    icon: 'hard-drive',
+    value: fit(arrayStatusText(snapshot, language), 40),
+    color: parity?.active
+      ? WIDGET_COLORS.INFO
+      : array.started
+        ? WIDGET_COLORS.SUCCESS
+        : array.state === 'STOPPED'
+          ? WIDGET_COLORS.WARNING
+          : WIDGET_COLORS.DANGER,
+  });
+  if (parity && !parity.active && parity.errors !== null && parity.status !== 'NEVER_RUN') {
+    summary.push({
+      label: t(TEXT.parity, language),
+      icon: 'shield',
+      value:
+        parity.errors > 0
+          ? `${parity.errors} ${t(TEXT.errors, language)}`
+          : t(TEXT.noError, language),
+      color: parity.errors > 0 ? WIDGET_COLORS.DANGER : WIDGET_COLORS.SUCCESS,
+    });
+  }
+
+  for (const disk of disks.filter(diskProblem)) {
+    problems.push({
+      label: disk.label,
+      icon: 'alert-triangle',
+      value: fit(
+        disk.ok
+          ? `${disk.errors} ${t(TEXT.errors, language)}`
+          : `${diskStatusText(disk.status, language)}${disk.errors ? ` · ${disk.errors} ${t(TEXT.errors, language)}` : ''}`,
+        40,
+      ),
+      color: WIDGET_COLORS.DANGER,
+    });
+  }
+  for (const disk of disks.filter(
+    (d) => !diskProblem(d) && d.usedPercent !== null && d.usedPercent >= d.criticalPercent,
+  )) {
+    problems.push({
+      label: disk.label,
+      icon: 'pie-chart',
+      value: `${formatNumber(disk.usedPercent, language)} % ${t(TEXT.used, language)}`,
+      color: WIDGET_COLORS.DANGER,
+    });
+  }
+  for (const disk of disks.filter((d) => !diskProblem(d) && d.temperature >= WARM_DISK_CELSIUS)) {
+    problems.push({
+      label: disk.label,
+      icon: 'thermometer',
+      value: `${formatNumber(disk.temperature, language)} °C`,
       color: WIDGET_COLORS.WARNING,
+    });
+  }
+  const healthy = disks.filter((disk) => !diskProblem(disk)).length;
+  const asleep = disks.filter((disk) => disk.spinning === false).length;
+  summary.push({
+    label: t(TEXT.disks, language),
+    icon: 'database',
+    value: `${healthy}/${disks.length} ${t(TEXT.disksOk, language)}${asleep ? ` · ${asleep} ${t(TEXT.asleep, language)}` : ''}`,
+    color: healthy === disks.length ? WIDGET_COLORS.SUCCESS : WIDGET_COLORS.DANGER,
+  });
+
+  if (snapshot.cpuTemperature !== null) {
+    summary.push({
+      label: t(TEXT.cpuTemperature, language),
+      icon: 'cpu',
+      value: `${formatNumber(snapshot.cpuTemperature, language)} °C`,
+      color: snapshot.cpuTemperature >= 80 ? WIDGET_COLORS.WARNING : WIDGET_COLORS.NEUTRAL,
+    });
+  }
+
+  if (snapshot.containers) {
+    const running = snapshot.containers.filter((c) => c.running).length;
+    summary.push({
+      label: t(TEXT.containers, language),
+      icon: 'box',
+      value: `${running}/${snapshot.containers.length} ${t(TEXT.running, language)}`,
+      color: WIDGET_COLORS.NEUTRAL,
+    });
+    // A container set to start with the array and not running: worth a look.
+    const down = snapshot.containers.filter((c) => c.autoStart && !c.running && array.started);
+    if (down.length) {
+      problems.push({
+        label: t(TEXT.stoppedAuto, language),
+        icon: 'box',
+        value: fit(down.map((c) => c.name).join(', '), 40),
+        color: WIDGET_COLORS.WARNING,
+      });
+    }
+  }
+  if (snapshot.vms?.length) {
+    summary.push({
+      label: t(TEXT.vms, language),
+      icon: 'monitor',
+      value: `${snapshot.vms.filter((vm) => vm.running).length}/${snapshot.vms.length} ${t(TEXT.running, language)}`,
+      color: WIDGET_COLORS.NEUTRAL,
+    });
+  }
+  for (const ups of snapshot.ups ?? []) {
+    const parts = [t(ups.onBattery ? TEXT.onBattery : TEXT.onMains, language)];
+    if (ups.battery !== null) {
+      parts.push(`${formatNumber(ups.battery, language)} %`);
+    }
+    if (ups.onBattery && ups.runtimeMinutes !== null) {
+      parts.push(`${formatNumber(ups.runtimeMinutes, language)} min`);
+    }
+    (ups.onBattery ? problems : summary).push({
+      label: fit(ups.name, 40),
+      icon: 'battery-charging',
+      value: fit(parts.join(' · '), 40),
+      color: ups.onBattery ? WIDGET_COLORS.WARNING : WIDGET_COLORS.SUCCESS,
+    });
+  }
+  const unread = snapshot.notifications?.unread;
+  if (unread && unread.alert + unread.warning > 0) {
+    problems.push({
+      label: t(TEXT.alerts, language),
+      icon: 'bell',
+      value: unread.alert + unread.warning,
+      color: unread.alert > 0 ? WIDGET_COLORS.DANGER : WIDGET_COLORS.WARNING,
+    });
+  }
+  const updates = snapshot.containers?.filter((c) => c.updateAvailable === true).length ?? 0;
+  if (updates > 0) {
+    summary.push({
+      label: t(TEXT.updates, language),
+      icon: 'download',
+      value: updates,
+      color: WIDGET_COLORS.INFO,
+    });
+  }
+  return [...problems, ...summary].slice(0, MAX_ROWS);
+}
+
+/** The buttons of the container or VM chosen in the settings, else Refresh. */
+export function buttons(hub, deviceExternalId, language) {
+  const found = deviceExternalId ? hub.find(deviceExternalId) : null;
+  const entry =
+    found && [DEVICE_TYPES.CONTAINER, DEVICE_TYPES.VM].includes(found.type)
+      ? hub.entryFor(found.record, found.type, found.key)
+      : null;
+  if (!entry) {
+    return [refreshButton(language)];
+  }
+  const { item } = entry;
+  const isContainer = found.type === DEVICE_TYPES.CONTAINER;
+  const list = [
+    {
+      type: 'button',
+      label: t(TEXT.start, language),
+      // Running: the check mark says so (never the style: `primary` is
+      // invisible in dark mode).
+      icon: item.running ? ACTIVE_ICON : 'play',
+      style: 'secondary',
+      action: { key: ACTIONS.START },
+    },
+  ];
+  // Gladys never stops its own containers.
+  if (!(isContainer && item.protected)) {
+    list.push({
+      type: 'button',
+      label: t(TEXT.stop, language),
+      icon: item.running ? 'square' : ACTIVE_ICON,
+      style: 'secondary',
+      action: { key: ACTIONS.STOP, confirm: true },
+    });
+    if (isContainer) {
+      list.push({
+        type: 'button',
+        label: t(TEXT.restart, language),
+        icon: 'rotate-cw',
+        style: 'secondary',
+        action: { key: ACTIONS.RESTART, confirm: true },
+      });
+    }
+  }
+  if (list.length < 3) {
+    list.push(refreshButton(language));
+  }
+  return list;
+}
+
+async function get(hub, { settings, language = 'en' }) {
+  const record = hub.record;
+  if (!record) {
+    return message(TEXT.pick, language);
+  }
+  if (record.error) {
+    const reason = labelled(
+      hub.serverName(),
+      pick(ERROR_TEXT[record.error.kind], language),
+      language,
+    );
+    return {
+      ttl_seconds: 60,
+      components: [
+        { type: 'text', variant: 'body', text: fit(reason, 300) },
+        refreshButton(language),
+      ],
     };
   }
-  return { value, color };
+  if (!record.snapshot) {
+    return message(TEXT.waiting, language);
+  }
+  const { snapshot } = record;
+  const percentTile = (value, label, icon) => ({
+    type: 'value',
+    value: value === null ? '—' : Math.round(value),
+    ...(value === null ? {} : { unit: '%' }),
+    label: t(label, language),
+    icon,
+  });
+  const heading = [hub.serverName(), snapshot.version ? `Unraid ${snapshot.version}` : null]
+    .filter(Boolean)
+    .join(' · ');
+  const components = [
+    { type: 'text', variant: 'heading', text: fit(heading, 40) },
+    percentTile(snapshot.cpu, TEXT.cpu, 'cpu'),
+    percentTile(snapshot.memory, TEXT.memory, 'layers'),
+    percentTile(snapshot.array.usedPercent, TEXT.arrayUsed, 'hard-drive'),
+    { type: 'status', items: rows(snapshot, language) },
+    ...buttons(hub, settings?.device, language),
+  ];
+  return { ttl_seconds: snapshot.parity?.active ? 30 : 60, components };
+}
+
+async function action(hub, { actionKey, settings }) {
+  const done = (render) =>
+    Object.fromEntries(Object.entries(DONE_TEXT).map(([lang, text]) => [lang, render(text)]));
+  if (actionKey === ACTIONS.REFRESH) {
+    await hub.pollAll();
+    return { message: done((text) => text.refreshed) };
+  }
+  if (![ACTIONS.START, ACTIONS.STOP, ACTIONS.RESTART].includes(actionKey)) {
+    throw new Error(`Unknown action ${actionKey}`);
+  }
+  const { name } = await hub.command(settings?.device, actionKey);
+  return { message: done((text) => text[actionKey](name).slice(0, 200)) };
 }
 
 export const WIDGETS = {
-  [DEMO_STATUS_WIDGET]: {
-    // `settings` holds the per-instance values of the declared `settings`
-    // (none here); `language` and `units` are those of the user viewing the
-    // dashboard, for the values you format yourself. Multi-language objects
-    // (`{ en, fr }`) are picked by the core, like everywhere else.
-    async get(gladys, { config }) {
-      logger.debug(`onWidgetGet <- ${DEMO_STATUS_WIDGET}`);
-      return {
-        // Reload policy: the computed parts below only change with the
-        // config, and index.js nudges the widget on every (re)connection and
-        // config update (see refreshWidgets) — the TTL is just a safety net.
-        ttl_seconds: 300,
-        components: [
-          // Device-bound tiles: LIVE, they follow the published states over
-          // the core's real-time path. No TTL, no nudge involved.
-          {
-            type: 'value',
-            label: { en: 'Temperature', fr: 'Température' },
-            icon: 'thermometer',
-            device_feature: featureExternalId(
-              gladys,
-              config,
-              weatherStation,
-              DEVICE_FEATURE_CATEGORIES.TEMPERATURE_SENSOR,
-            ),
-          },
-          {
-            type: 'value',
-            label: { en: 'Office plug', fr: 'Prise du bureau' },
-            icon: 'zap',
-            device_feature: featureExternalId(
-              gladys,
-              config,
-              plug,
-              DEVICE_FEATURE_CATEGORIES.ENERGY_SENSOR,
-            ),
-          },
-          // Computed rows: what the integration knows that no device feature
-          // carries. Served from the core cache until the TTL or a nudge.
-          {
-            type: 'status',
-            items: [
-              {
-                label: { en: 'Plug connection', fr: 'Connexion de la prise' },
-                icon: 'wifi',
-                ...plugConnectionStatus(gladys, config),
-              },
-              {
-                label: { en: 'Observed location', fr: 'Position observée' },
-                icon: 'map-pin',
-                value: `${config.latitude.toFixed(2)}, ${config.longitude.toFixed(2)}`,
-                color: WIDGET_COLORS.NEUTRAL,
-              },
-            ],
-          },
-          // `params` are declared HERE and sent back as-is: the handler never
-          // receives user input (a dashboard can hang on a public wall).
-          {
-            type: 'button',
-            label: { en: 'Identify the light', fr: 'Identifier la lampe' },
-            icon: 'eye',
-            style: 'secondary',
-            action: {
-              key: DEMO_STATUS_ACTIONS.IDENTIFY_LIGHT,
-              params: { device: light.deviceExternalId(gladys) },
-            },
-          },
-        ],
-      };
-    },
-
-    // Resolve an optional toast (string or multi-language object, ≤ 200
-    // characters). After a successful action the core drops the cached
-    // content and every open dashboard refetches it: no nudge needed.
-    async action(gladys, { actionKey, params, config }) {
-      logger.info(`onWidgetAction <- ${DEMO_STATUS_WIDGET}.${actionKey}`);
-      if (actionKey === DEMO_STATUS_ACTIONS.IDENTIFY_LIGHT) {
-        return identifyDevice(gladys, params.device, config);
-      }
-      // Throwing acks the action as failed: the message reaches the user.
-      throw new Error(`Unknown widget action: ${actionKey}`);
-    },
-  },
+  [WIDGET_KEY]: { get, action },
 };
-
-/**
- * Freshness nudge: ask the core to re-pull every widget NOW instead of
- * waiting for the content TTL. Call it when you KNOW a computed content
- * changed (here: the config, which drives the plug transport and the observed
- * location) — and after every (re)connection, since the nudges are
- * fire-and-forget: rate-limited core-side to 1 per 10 s per widget, dropped
- * silently while disconnected.
- */
-export function refreshWidgets(gladys) {
-  for (const key of Object.keys(WIDGETS)) {
-    gladys.requestWidgetRefresh(key);
-  }
-}

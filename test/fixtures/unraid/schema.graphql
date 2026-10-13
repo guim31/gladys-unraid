@@ -1,0 +1,384 @@
+# Field signatures of the Unraid API, reduced to the types this integration
+# reads, without descriptions: the facts needed to check its queries and to
+# run the fake Unraid of the tests (test/helpers/fakeUnraid.js).
+# Extracted from api/generated-schema.graphql of github.com/unraid/api
+# (commit d19a6f4, 2026-10-12, API 4.37.5). Tests only: never shipped.
+
+scalar JSON
+
+scalar DateTime
+
+scalar BigInt
+
+scalar PrefixedID
+
+interface Node {
+  id: PrefixedID!
+}
+
+type Query {
+  notifications: Notifications!
+  online: Boolean!
+  vars: Vars!
+  vms: Vms!
+  array: UnraidArray!
+  info: Info!
+  docker: Docker!
+  metrics: Metrics!
+  upsDevices: [UPSDevice!]!
+}
+
+type Mutation {
+  docker: DockerMutations!
+  vm: VmMutations!
+}
+
+type UnraidArray implements Node {
+  id: PrefixedID!
+  state: ArrayState!
+  capacity: ArrayCapacity!
+  boot: ArrayDisk
+  bootDevices: [ArrayDisk!]!
+  parities: [ArrayDisk!]!
+  parityCheckStatus: ParityCheck!
+  disks: [ArrayDisk!]!
+  caches: [ArrayDisk!]!
+}
+
+type ArrayDisk implements Node {
+  id: PrefixedID!
+  idx: Int!
+  name: String
+  device: String
+  size: BigInt
+  status: ArrayDiskStatus
+  rotational: Boolean
+  temp: Int
+  numReads: BigInt
+  numWrites: BigInt
+  numErrors: BigInt
+  fsSize: BigInt
+  fsFree: BigInt
+  fsUsed: BigInt
+  exportable: Boolean
+  type: ArrayDiskType!
+  warning: Int
+  critical: Int
+  fsType: String
+  comment: String
+  format: String
+  transport: String
+  color: ArrayDiskFsColor
+  isSpinning: Boolean
+}
+
+type ArrayCapacity {
+  kilobytes: Capacity!
+  disks: Capacity!
+}
+
+type Capacity {
+  free: String!
+  used: String!
+  total: String!
+}
+
+type ParityCheck {
+  date: DateTime
+  duration: Int
+  speed: String
+  status: ParityCheckStatus!
+  errors: Int
+  progress: Int
+  correcting: Boolean
+  paused: Boolean
+  running: Boolean
+}
+
+type Info implements Node {
+  id: PrefixedID!
+  time: DateTime!
+  cpu: InfoCpu!
+  machineId: ID
+  os: InfoOs!
+  versions: InfoVersions!
+}
+
+type InfoOs implements Node {
+  id: PrefixedID!
+  platform: String
+  distro: String
+  release: String
+  codename: String
+  kernel: String
+  arch: String
+  hostname: String
+  fqdn: String
+  build: String
+  servicepack: String
+  uptime: String
+  logofile: String
+  serial: String
+  uefi: Boolean
+}
+
+type InfoCpu implements Node {
+  id: PrefixedID!
+  brand: String
+  threads: Int
+  cores: Int
+  packages: CpuPackages!
+}
+
+type CpuPackages implements Node {
+  id: PrefixedID!
+  totalPower: Float!
+  power: [Float!]!
+  temp: [Float!]!
+}
+
+type InfoVersions implements Node {
+  id: PrefixedID!
+  core: CoreVersions!
+  packages: PackageVersions
+}
+
+type CoreVersions {
+  unraid: String
+  api: String
+  kernel: String
+}
+
+type PackageVersions {
+  openssl: String
+  node: String
+  npm: String
+  pm2: String
+  git: String
+  nginx: String
+  php: String
+  docker: String
+}
+
+type Metrics implements Node {
+  id: PrefixedID!
+  cpu: CpuUtilization
+  memory: MemoryUtilization
+}
+
+type CpuUtilization implements Node {
+  id: PrefixedID!
+  percentTotal: Float!
+}
+
+type MemoryUtilization implements Node {
+  id: PrefixedID!
+  total: BigInt!
+  used: BigInt!
+  free: BigInt!
+  available: BigInt!
+  active: BigInt!
+  buffcache: BigInt!
+  percentTotal: Float!
+  swapTotal: BigInt!
+  swapUsed: BigInt!
+  swapFree: BigInt!
+  percentSwapTotal: Float!
+}
+
+type Vars implements Node {
+  id: PrefixedID!
+  version: String
+  name: String
+  sbSyncErrs: Int
+  mdResync: Int
+  mdResyncCorr: String
+  mdResyncPos: String
+  mdResyncAction: String
+  mdState: String
+  fsState: String
+}
+
+type Docker implements Node {
+  id: PrefixedID!
+  containers(skipCache: Boolean! = false): [DockerContainer!]!
+}
+
+type DockerContainer implements Node {
+  id: PrefixedID!
+  names: [String!]!
+  image: String!
+  created: Int!
+  labels: JSON
+  state: ContainerState!
+  status: String!
+  autoStart: Boolean!
+  isUpdateAvailable: Boolean
+}
+
+type Vms implements Node {
+  id: PrefixedID!
+  domains: [VmDomain!]
+  domain: [VmDomain!]
+}
+
+type VmDomain implements Node {
+  id: PrefixedID!
+  name: String
+  state: VmState!
+  uuid: String
+}
+
+type UPSDevice {
+  id: ID!
+  name: String!
+  model: String!
+  status: String!
+  battery: UPSBattery!
+  power: UPSPower!
+}
+
+type UPSBattery {
+  chargeLevel: Int!
+  estimatedRuntime: Int!
+  health: String!
+}
+
+type UPSPower {
+  inputVoltage: Float!
+  outputVoltage: Float!
+  loadPercentage: Int!
+  nominalPower: Int
+  currentPower: Float
+}
+
+type Notifications implements Node {
+  id: PrefixedID!
+  overview: NotificationOverview!
+  list(filter: NotificationFilter!): [Notification!]!
+}
+
+type NotificationOverview {
+  unread: NotificationCounts!
+  archive: NotificationCounts!
+}
+
+type NotificationCounts {
+  info: Int!
+  warning: Int!
+  alert: Int!
+  total: Int!
+}
+
+type Notification implements Node {
+  id: PrefixedID!
+  title: String!
+  subject: String!
+  description: String!
+  importance: NotificationImportance!
+  link: String
+  type: NotificationType!
+  timestamp: String
+  formattedTimestamp: String
+}
+
+type DockerMutations {
+  start(id: PrefixedID!): DockerContainer!
+  stop(id: PrefixedID!): DockerContainer!
+  restart(id: PrefixedID!): DockerContainer!
+}
+
+type VmMutations {
+  start(id: PrefixedID!): Boolean!
+  stop(id: PrefixedID!): Boolean!
+}
+
+input NotificationFilter {
+  importance: NotificationImportance
+  type: NotificationType!
+  offset: Int!
+  limit: Int!
+}
+
+enum ArrayState {
+  STARTED
+  STOPPED
+  NEW_ARRAY
+  RECON_DISK
+  DISABLE_DISK
+  SWAP_DSBL
+  INVALID_EXPANSION
+  PARITY_NOT_BIGGEST
+  TOO_MANY_MISSING_DISKS
+  NEW_DISK_TOO_SMALL
+  NO_DATA_DISKS
+}
+
+enum ArrayDiskStatus {
+  DISK_NP
+  DISK_OK
+  DISK_NP_MISSING
+  DISK_INVALID
+  DISK_WRONG
+  DISK_DSBL
+  DISK_NP_DSBL
+  DISK_DSBL_NEW
+  DISK_NEW
+}
+
+enum ArrayDiskType {
+  DATA
+  PARITY
+  BOOT
+  FLASH
+  CACHE
+}
+
+enum ArrayDiskFsColor {
+  GREEN_ON
+  GREEN_BLINK
+  BLUE_ON
+  BLUE_BLINK
+  YELLOW_ON
+  YELLOW_BLINK
+  RED_ON
+  RED_OFF
+  GREY_OFF
+}
+
+enum ParityCheckStatus {
+  NEVER_RUN
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+enum ContainerState {
+  RUNNING
+  PAUSED
+  EXITED
+}
+
+enum VmState {
+  NOSTATE
+  RUNNING
+  IDLE
+  PAUSED
+  SHUTDOWN
+  SHUTOFF
+  CRASHED
+  PMSUSPENDED
+}
+
+enum NotificationImportance {
+  ALERT
+  INFO
+  WARNING
+}
+
+enum NotificationType {
+  UNREAD
+  ARCHIVE
+}

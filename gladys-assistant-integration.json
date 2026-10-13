@@ -1,177 +1,1069 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "Unraid",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Unraid server: array, parity, disks, Docker containers, VMs, UPS and alerts in Gladys.",
+    "fr": "Serveur Unraid : matrice, parité, disques, conteneurs Docker, VM, onduleur et alertes dans Gladys.",
+    "de": "Unraid-Server: Array, Parität, Festplatten, Docker-Container, VMs, USV und Warnungen in Gladys.",
+    "es": "Servidor Unraid: array, paridad, discos, contenedores Docker, VM, SAI y alertas en Gladys."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-unraid:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-unraid/main/cover.png",
+  "categories": ["network"],
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Your Unraid server",
+        "fr": "Votre serveur Unraid",
+        "de": "Dein Unraid-Server",
+        "es": "Su servidor Unraid"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "Unraid 7.2 or later (its API is built in). In Unraid, create an API key: Settings, Management Access, API Keys, role Viewer. To start and stop containers and VMs from Gladys, also give it the Docker and VMs permissions.",
+        "fr": "Unraid 7.2 ou plus récent (son API est intégrée). Dans Unraid, créez une clé d'API : Settings, Management Access, API Keys, rôle Viewer. Pour démarrer et arrêter conteneurs et VM depuis Gladys, donnez-lui aussi les droits Docker et VMs.",
+        "de": "Unraid 7.2 oder neuer (die API ist eingebaut). Erstelle in Unraid einen API-Schlüssel: Settings, Management Access, API Keys, Rolle Viewer. Um Container und VMs aus Gladys zu starten und zu stoppen, gib ihm auch die Rechte Docker und VMs.",
+        "es": "Unraid 7.2 o posterior (su API está integrada). En Unraid, cree una clave de API: Settings, Management Access, API Keys, rol Viewer. Para iniciar y detener contenedores y VM desde Gladys, concédale también los permisos Docker y VMs."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://docs.unraid.net/API/",
+          "label": {
+            "en": "Unraid API documentation",
+            "fr": "Documentation de l'API Unraid",
+            "de": "Dokumentation der Unraid-API",
+            "es": "Documentación de la API de Unraid"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "url",
+      "type": "string",
+      "label": {
+        "en": "Address",
+        "fr": "Adresse",
+        "de": "Adresse",
+        "es": "Dirección"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
+      "description": {
+        "en": "IP address or name of the Unraid server, as in your browser: with https:// for HTTPS and :port if not the default.",
+        "fr": "Adresse IP ou nom du serveur Unraid, comme dans votre navigateur : avec https:// pour le HTTPS et :port s'il n'est pas standard.",
+        "de": "IP-Adresse oder Name des Unraid-Servers, wie im Browser: mit https:// für HTTPS und :Port, falls nicht Standard.",
+        "es": "Dirección IP o nombre del servidor Unraid, como en su navegador: con https:// para HTTPS y :puerto si no es el estándar."
+      },
+      "placeholder": {
+        "en": "e.g. 192.168.1.10",
+        "fr": "ex. 192.168.1.10",
+        "de": "z. B. 192.168.1.10",
+        "es": "p. ej. 192.168.1.10"
+      },
       "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "default": ""
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "api_key",
+      "type": "secret",
+      "label": {
+        "en": "API key",
+        "fr": "Clé d'API",
+        "de": "API-Schlüssel",
+        "es": "Clave de API"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "description": {
+        "en": "Created in Unraid: Settings, Management Access, API Keys.",
+        "fr": "Créée dans Unraid : Settings, Management Access, API Keys.",
+        "de": "Erstellt in Unraid: Settings, Management Access, API Keys.",
+        "es": "Creada en Unraid: Settings, Management Access, API Keys."
+      },
+      "required": true
     },
     {
-      "key": "unit",
-      "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "key": "name",
+      "type": "string",
+      "label": {
+        "en": "Name",
+        "fr": "Nom",
+        "de": "Name",
+        "es": "Nombre"
+      },
+      "description": {
+        "en": "Name of the server in Gladys. Empty: the name of the Unraid server.",
+        "fr": "Nom du serveur dans Gladys. Vide : le nom du serveur Unraid.",
+        "de": "Name des Servers in Gladys. Leer: der Name des Unraid-Servers.",
+        "es": "Nombre del servidor en Gladys. Vacío: el nombre del servidor Unraid."
+      },
+      "placeholder": {
+        "en": "e.g. NAS",
+        "fr": "ex. NAS",
+        "de": "z. B. NAS",
+        "es": "p. ej. NAS"
+      },
       "required": false,
-      "default": "celsius",
+      "default": ""
+    },
+    {
+      "key": "options",
+      "type": "section",
+      "label": {
+        "en": "Options",
+        "fr": "Options",
+        "de": "Optionen",
+        "es": "Opciones"
+      }
+    },
+    {
+      "key": "allow_self_signed",
+      "type": "boolean",
+      "label": {
+        "en": "Accept self-signed certificates",
+        "fr": "Accepter les certificats auto-signés",
+        "de": "Selbstsignierte Zertifikate akzeptieren",
+        "es": "Aceptar certificados autofirmados"
+      },
+      "description": {
+        "en": "When Unraid's \"Use SSL/TLS\" is \"Yes\": its certificate is self-signed. Tick only for your own server.",
+        "fr": "Quand « Use SSL/TLS » d'Unraid vaut « Yes » : son certificat est auto-signé. À cocher pour votre propre serveur seulement.",
+        "de": "Wenn „Use SSL/TLS“ von Unraid auf „Yes“ steht: Sein Zertifikat ist selbstsigniert. Nur für deinen eigenen Server aktivieren.",
+        "es": "Cuando «Use SSL/TLS» de Unraid está en «Yes»: su certificado es autofirmado. Márquelo solo para su propio servidor."
+      },
+      "required": false,
+      "default": false
+    },
+    {
+      "key": "poll_interval",
+      "type": "select",
+      "label": {
+        "en": "Refresh interval",
+        "fr": "Intervalle de rafraîchissement",
+        "de": "Aktualisierungsintervall",
+        "es": "Intervalo de actualización"
+      },
+      "description": {
+        "en": "How often the Unraid server is read. Reading never wakes a sleeping disk.",
+        "fr": "Fréquence de lecture du serveur Unraid. La lecture ne réveille jamais un disque en veille.",
+        "de": "Wie oft der Unraid-Server gelesen wird. Das Lesen weckt nie eine Festplatte im Standby.",
+        "es": "Con qué frecuencia se lee el servidor Unraid. La lectura nunca despierta un disco en reposo."
+      },
+      "required": false,
+      "default": "60",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "15",
+          "label": {
+            "en": "15 seconds",
+            "fr": "15 secondes",
+            "de": "15 Sekunden",
+            "es": "15 segundos"
+          }
+        },
+        {
+          "value": "30",
+          "label": {
+            "en": "30 seconds",
+            "fr": "30 secondes",
+            "de": "30 Sekunden",
+            "es": "30 segundos"
+          }
+        },
+        {
+          "value": "60",
+          "label": {
+            "en": "1 minute",
+            "fr": "1 minute",
+            "de": "1 Minute",
+            "es": "1 minuto"
+          }
+        },
+        {
+          "value": "120",
+          "label": {
+            "en": "2 minutes",
+            "fr": "2 minutes",
+            "de": "2 Minuten",
+            "es": "2 minutos"
+          }
+        },
+        {
+          "value": "300",
+          "label": {
+            "en": "5 minutes",
+            "fr": "5 minutes",
+            "de": "5 Minuten",
+            "es": "5 minutos"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the names and texts",
+        "fr": "Langue des noms et des textes",
+        "de": "Sprache der Namen und Texte",
+        "es": "Idioma de los nombres y textos"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Names given to the features when a device is added, state texts, and texts of the scene events.",
+        "fr": "Noms donnés aux fonctionnalités à l'ajout d'un appareil, textes d'état, et textes des événements de scène.",
+        "de": "Namen der Funktionen beim Hinzufügen eines Geräts, Zustandstexte und Texte der Szenen-Ereignisse.",
+        "es": "Nombres de las funciones al añadir un dispositivo, textos de estado y textos de los eventos de escena."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais",
+            "de": "Englisch",
+            "es": "Inglés"
+          }
+        },
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français",
+            "de": "Französisch",
+            "es": "Francés"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "German",
+            "fr": "Allemand",
+            "de": "Deutsch",
+            "es": "Alemán"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Spanish",
+            "fr": "Espagnol",
+            "de": "Spanisch",
+            "es": "Español"
+          }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion",
+        "de": "Verbindung testen",
+        "es": "Probar la conexión"
+      },
+      "description": {
+        "en": "Reads the Unraid server now and reports what it finds.",
+        "fr": "Lit le serveur Unraid maintenant et indique ce qu'il trouve.",
+        "de": "Liest den Unraid-Server sofort und meldet, was er findet.",
+        "es": "Lee el servidor Unraid ahora e indica lo que encuentra."
+      },
       "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "disk_error",
+      "label": {
+        "en": "Unraid disk in error",
+        "fr": "Disque Unraid en erreur",
+        "de": "Unraid-Festplatte mit Fehler",
+        "es": "Disco de Unraid con error"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "A disk of the array is disabled, missing or emulated, or its read errors grow.",
+        "fr": "Un disque de la matrice est désactivé, manquant ou émulé, ou ses erreurs de lecture augmentent.",
+        "de": "Eine Festplatte des Arrays ist deaktiviert, fehlt oder wird emuliert, oder ihre Lesefehler steigen.",
+        "es": "Un disco del array está desactivado, ausente o emulado, o sus errores de lectura aumentan."
       },
       "fields": [
         {
-          "key": "device",
+          "key": "disk",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "label": {
+            "en": "Disk (empty: any)",
+            "fr": "Disque (vide : n'importe lequel)",
+            "de": "Festplatte (leer: beliebig)",
+            "es": "Disco (vacío: cualquiera)"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "server_name",
+          "type": "string",
+          "label": {
+            "en": "Server name",
+            "fr": "Nom du serveur",
+            "de": "Servername",
+            "es": "Nombre del servidor"
+          }
         },
         {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "key": "disk_name",
+          "type": "string",
+          "label": {
+            "en": "Disk name",
+            "fr": "Nom du disque",
+            "de": "Name der Festplatte",
+            "es": "Nombre del disco"
+          }
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "label": {
+            "en": "Disk status",
+            "fr": "État du disque",
+            "de": "Status der Festplatte",
+            "es": "Estado del disco"
+          }
+        },
+        {
+          "key": "errors",
+          "type": "number",
+          "label": {
+            "en": "Read errors",
+            "fr": "Erreurs de lecture",
+            "de": "Lesefehler",
+            "es": "Errores de lectura"
+          }
+        }
+      ]
+    },
+    {
+      "key": "disk_hot",
+      "label": {
+        "en": "Unraid disk too hot",
+        "fr": "Disque Unraid trop chaud",
+        "de": "Unraid-Festplatte zu heiß",
+        "es": "Disco de Unraid demasiado caliente"
+      },
+      "description": {
+        "en": "A disk reaches the chosen temperature (two reads in a row). A sleeping disk is never woken to read it.",
+        "fr": "Un disque atteint la température choisie (deux lectures de suite). Un disque en veille n'est jamais réveillé pour la lire.",
+        "de": "Eine Festplatte erreicht die gewählte Temperatur (zwei Abfragen in Folge). Eine Festplatte im Standby wird dafür nie geweckt.",
+        "es": "Un disco alcanza la temperatura elegida (dos lecturas seguidas). Un disco en reposo nunca se despierta para leerla."
+      },
+      "fields": [
+        {
+          "key": "disk",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Disk (empty: any)",
+            "fr": "Disque (vide : n'importe lequel)",
+            "de": "Festplatte (leer: beliebig)",
+            "es": "Disco (vacío: cualquiera)"
+          }
+        },
+        {
+          "key": "threshold",
+          "type": "select",
+          "required": true,
+          "default": "50",
+          "label": {
+            "en": "Temperature reached",
+            "fr": "Température atteinte",
+            "de": "Erreichte Temperatur",
+            "es": "Temperatura alcanzada"
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            {
+              "value": "40",
+              "label": {
+                "en": "40 °C",
+                "fr": "40 °C",
+                "de": "40 °C",
+                "es": "40 °C"
+              }
+            },
+            {
+              "value": "45",
+              "label": {
+                "en": "45 °C",
+                "fr": "45 °C",
+                "de": "45 °C",
+                "es": "45 °C"
+              }
+            },
+            {
+              "value": "50",
+              "label": {
+                "en": "50 °C",
+                "fr": "50 °C",
+                "de": "50 °C",
+                "es": "50 °C"
+              }
+            },
+            {
+              "value": "55",
+              "label": {
+                "en": "55 °C",
+                "fr": "55 °C",
+                "de": "55 °C",
+                "es": "55 °C"
+              }
+            },
+            {
+              "value": "60",
+              "label": {
+                "en": "60 °C",
+                "fr": "60 °C",
+                "de": "60 °C",
+                "es": "60 °C"
+              }
+            },
+            {
+              "value": "65",
+              "label": {
+                "en": "65 °C",
+                "fr": "65 °C",
+                "de": "65 °C",
+                "es": "65 °C"
+              }
+            },
+            {
+              "value": "70",
+              "label": {
+                "en": "70 °C",
+                "fr": "70 °C",
+                "de": "70 °C",
+                "es": "70 °C"
+              }
+            }
           ]
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "server_name",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Server name",
+            "fr": "Nom du serveur",
+            "de": "Servername",
+            "es": "Nombre del servidor"
+          }
+        },
+        {
+          "key": "disk_name",
+          "type": "string",
+          "label": {
+            "en": "Disk name",
+            "fr": "Nom du disque",
+            "de": "Name der Festplatte",
+            "es": "Nombre del disco"
+          }
+        },
+        {
+          "key": "temperature",
+          "type": "number",
+          "label": {
+            "en": "Temperature (°C)",
+            "fr": "Température (°C)",
+            "de": "Temperatur (°C)",
+            "es": "Temperatura (°C)"
+          }
+        },
+        {
+          "key": "threshold",
+          "type": "number",
+          "label": {
+            "en": "Threshold (°C)",
+            "fr": "Seuil (°C)",
+            "de": "Schwelle (°C)",
+            "es": "Umbral (°C)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "parity_check_finished",
+      "label": {
+        "en": "Unraid parity check finished",
+        "fr": "Contrôle de parité Unraid terminé",
+        "de": "Unraid-Paritätsprüfung beendet",
+        "es": "Comprobación de paridad de Unraid terminada"
+      },
+      "description": {
+        "en": "A parity check, a rebuild or a disk clear ended: without errors, with errors, or stopped before the end.",
+        "fr": "Un contrôle de parité, une reconstruction ou un effacement est terminé : sans erreur, avec erreurs, ou arrêté avant la fin.",
+        "de": "Eine Paritätsprüfung, ein Wiederaufbau oder ein Löschen ist beendet: ohne Fehler, mit Fehlern oder vorzeitig gestoppt.",
+        "es": "Una comprobación de paridad, una reconstrucción o un borrado ha terminado: sin errores, con errores o detenido antes del final."
+      },
+      "fields": [
+        {
+          "key": "result",
+          "type": "select",
+          "label": {
+            "en": "Result (empty: any)",
+            "fr": "Résultat (vide : tous)",
+            "de": "Ergebnis (leer: beliebig)",
+            "es": "Resultado (vacío: cualquiera)"
+          },
+          "options": [
+            {
+              "value": "ok",
+              "label": {
+                "en": "No error",
+                "fr": "Sans erreur",
+                "de": "Ohne Fehler",
+                "es": "Sin errores"
+              }
+            },
+            {
+              "value": "errors",
+              "label": {
+                "en": "With errors",
+                "fr": "Avec erreurs",
+                "de": "Mit Fehlern",
+                "es": "Con errores"
+              }
+            },
+            {
+              "value": "aborted",
+              "label": {
+                "en": "Stopped before the end",
+                "fr": "Arrêté avant la fin",
+                "de": "Vorzeitig gestoppt",
+                "es": "Detenido antes del final"
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "key": "server_name",
+          "type": "string",
+          "label": {
+            "en": "Server name",
+            "fr": "Nom du serveur",
+            "de": "Servername",
+            "es": "Nombre del servidor"
+          }
+        },
+        {
+          "key": "result",
+          "type": "string",
+          "label": {
+            "en": "Result (ok, errors, aborted)",
+            "fr": "Résultat (ok, errors, aborted)",
+            "de": "Ergebnis (ok, errors, aborted)",
+            "es": "Resultado (ok, errors, aborted)"
+          }
+        },
+        {
+          "key": "errors",
+          "type": "number",
+          "label": {
+            "en": "Errors found",
+            "fr": "Erreurs trouvées",
+            "de": "Gefundene Fehler",
+            "es": "Errores encontrados"
+          }
+        },
+        {
+          "key": "duration_minutes",
+          "type": "number",
+          "label": {
+            "en": "Duration in minutes",
+            "fr": "Durée en minutes",
+            "de": "Dauer in Minuten",
+            "es": "Duración en minutos"
+          }
+        },
+        {
+          "key": "operation",
+          "type": "string",
+          "label": {
+            "en": "Operation (check, rebuild, clear)",
+            "fr": "Opération (check, rebuild, clear)",
+            "de": "Vorgang (check, rebuild, clear)",
+            "es": "Operación (check, rebuild, clear)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "container_stopped",
+      "label": {
+        "en": "Unraid container stopped",
+        "fr": "Conteneur Unraid arrêté",
+        "de": "Unraid-Container gestoppt",
+        "es": "Contenedor de Unraid detenido"
+      },
+      "description": {
+        "en": "A Docker container that was running stopped or was removed (two reads in a row), outside Gladys.",
+        "fr": "Un conteneur Docker qui tournait s'est arrêté ou a été supprimé (deux lectures de suite), hors de Gladys.",
+        "de": "Ein laufender Docker-Container wurde gestoppt oder entfernt (zwei Abfragen in Folge), außerhalb von Gladys.",
+        "es": "Un contenedor Docker que estaba en marcha se ha detenido o eliminado (dos lecturas seguidas), fuera de Gladys."
+      },
+      "fields": [
+        {
+          "key": "container",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Container (empty: any)",
+            "fr": "Conteneur (vide : n'importe lequel)",
+            "de": "Container (leer: beliebig)",
+            "es": "Contenedor (vacío: cualquiera)"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "server_name",
+          "type": "string",
+          "label": {
+            "en": "Server name",
+            "fr": "Nom du serveur",
+            "de": "Servername",
+            "es": "Nombre del servidor"
+          }
+        },
+        {
+          "key": "container_name",
+          "type": "string",
+          "label": {
+            "en": "Container name",
+            "fr": "Nom du conteneur",
+            "de": "Name des Containers",
+            "es": "Nombre del contenedor"
+          }
+        },
+        {
+          "key": "state",
+          "type": "string",
+          "label": {
+            "en": "State",
+            "fr": "État",
+            "de": "Zustand",
+            "es": "Estado"
+          }
+        }
+      ]
+    },
+    {
+      "key": "notification",
+      "label": {
+        "en": "Unraid notification",
+        "fr": "Notification Unraid",
+        "de": "Unraid-Benachrichtigung",
+        "es": "Notificación de Unraid"
+      },
+      "description": {
+        "en": "Unraid posted a new notification (alert, warning or information): SMART, temperature, array, update…",
+        "fr": "Unraid a publié une nouvelle notification (alerte, avertissement ou information) : SMART, température, matrice, mise à jour…",
+        "de": "Unraid hat eine neue Benachrichtigung veröffentlicht (Alarm, Warnung oder Info): SMART, Temperatur, Array, Update …",
+        "es": "Unraid ha publicado una nueva notificación (alerta, aviso o información): SMART, temperatura, array, actualización…"
+      },
+      "fields": [
+        {
+          "key": "importance",
+          "type": "multi_select",
+          "label": {
+            "en": "Importance (empty: any)",
+            "fr": "Importance (vide : toutes)",
+            "de": "Wichtigkeit (leer: beliebig)",
+            "es": "Importancia (vacío: cualquiera)"
+          },
+          "options": [
+            {
+              "value": "alert",
+              "label": {
+                "en": "Alert",
+                "fr": "Alerte",
+                "de": "Alarm",
+                "es": "Alerta"
+              }
+            },
+            {
+              "value": "warning",
+              "label": {
+                "en": "Warning",
+                "fr": "Avertissement",
+                "de": "Warnung",
+                "es": "Aviso"
+              }
+            },
+            {
+              "value": "info",
+              "label": {
+                "en": "Information",
+                "fr": "Information",
+                "de": "Information",
+                "es": "Información"
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "key": "server_name",
+          "type": "string",
+          "label": {
+            "en": "Server name",
+            "fr": "Nom du serveur",
+            "de": "Servername",
+            "es": "Nombre del servidor"
+          }
+        },
+        {
+          "key": "importance",
+          "type": "string",
+          "label": {
+            "en": "Importance (alert, warning, info)",
+            "fr": "Importance (alert, warning, info)",
+            "de": "Wichtigkeit (alert, warning, info)",
+            "es": "Importancia (alert, warning, info)"
+          }
+        },
+        {
+          "key": "title",
+          "type": "string",
+          "label": {
+            "en": "Title",
+            "fr": "Titre",
+            "de": "Titel",
+            "es": "Título"
+          }
+        },
+        {
+          "key": "subject",
+          "type": "string",
+          "label": {
+            "en": "Subject",
+            "fr": "Sujet",
+            "de": "Betreff",
+            "es": "Asunto"
+          }
+        },
+        {
+          "key": "description",
+          "type": "string",
+          "label": {
+            "en": "Description",
+            "fr": "Description",
+            "de": "Beschreibung",
+            "es": "Descripción"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "control_container",
+      "label": {
+        "en": "Control an Unraid container",
+        "fr": "Piloter un conteneur Unraid",
+        "de": "Unraid-Container steuern",
+        "es": "Controlar un contenedor de Unraid"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Start, stop or restart a Docker container of the Unraid server.",
+        "fr": "Démarre, arrête ou redémarre un conteneur Docker du serveur Unraid.",
+        "de": "Startet, stoppt oder startet einen Docker-Container des Unraid-Servers neu.",
+        "es": "Inicia, detiene o reinicia un contenedor Docker del servidor Unraid."
+      },
+      "timeout_seconds": 60,
       "fields": [
         {
-          "key": "device",
+          "key": "container",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "required": true,
+          "label": {
+            "en": "Container",
+            "fr": "Conteneur",
+            "de": "Container",
+            "es": "Contenedor"
+          }
+        },
+        {
+          "key": "command",
+          "type": "select",
+          "required": true,
+          "default": "restart",
+          "label": {
+            "en": "Command",
+            "fr": "Commande",
+            "de": "Befehl",
+            "es": "Orden"
+          },
+          "options": [
+            {
+              "value": "start",
+              "label": {
+                "en": "Start",
+                "fr": "Démarrer",
+                "de": "Starten",
+                "es": "Iniciar"
+              }
+            },
+            {
+              "value": "stop",
+              "label": {
+                "en": "Stop",
+                "fr": "Arrêter",
+                "de": "Stoppen",
+                "es": "Detener"
+              }
+            },
+            {
+              "value": "restart",
+              "label": {
+                "en": "Restart",
+                "fr": "Redémarrer",
+                "de": "Neu starten",
+                "es": "Reiniciar"
+              }
+            }
+          ]
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
+          "key": "container_name",
+          "type": "string",
+          "label": {
+            "en": "Container name",
+            "fr": "Nom du conteneur",
+            "de": "Name des Containers",
+            "es": "Nombre del contenedor"
+          }
+        }
+      ]
+    },
+    {
+      "key": "control_vm",
+      "label": {
+        "en": "Control an Unraid VM",
+        "fr": "Piloter une VM Unraid",
+        "de": "Unraid-VM steuern",
+        "es": "Controlar una VM de Unraid"
+      },
+      "description": {
+        "en": "Start a virtual machine, or shut it down cleanly (like the power button).",
+        "fr": "Démarre une machine virtuelle, ou l'éteint proprement (comme le bouton d'alimentation).",
+        "de": "Startet eine virtuelle Maschine oder fährt sie sauber herunter (wie der Einschaltknopf).",
+        "es": "Inicia una máquina virtual o la apaga correctamente (como el botón de encendido)."
+      },
+      "timeout_seconds": 60,
+      "fields": [
+        {
+          "key": "vm",
+          "type": "select",
+          "source": "devices",
+          "required": true,
+          "label": {
+            "en": "VM",
+            "fr": "VM",
+            "de": "VM",
+            "es": "VM"
+          }
+        },
+        {
+          "key": "command",
+          "type": "select",
+          "required": true,
+          "default": "start",
+          "label": {
+            "en": "Command",
+            "fr": "Commande",
+            "de": "Befehl",
+            "es": "Orden"
+          },
+          "options": [
+            {
+              "value": "start",
+              "label": {
+                "en": "Start",
+                "fr": "Démarrer",
+                "de": "Starten",
+                "es": "Iniciar"
+              }
+            },
+            {
+              "value": "stop",
+              "label": {
+                "en": "Shut down",
+                "fr": "Éteindre",
+                "de": "Herunterfahren",
+                "es": "Apagar"
+              }
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "vm_name",
+          "type": "string",
+          "label": {
+            "en": "VM name",
+            "fr": "Nom de la VM",
+            "de": "Name der VM",
+            "es": "Nombre de la VM"
+          }
+        }
+      ]
+    },
+    {
+      "key": "get_server_status",
+      "label": {
+        "en": "Unraid server status",
+        "fr": "État du serveur Unraid",
+        "de": "Zustand des Unraid-Servers",
+        "es": "Estado del servidor Unraid"
+      },
+      "description": {
+        "en": "Reads the Unraid server for the next actions: array, disks, containers, alerts, and a ready-made summary.",
+        "fr": "Lit le serveur Unraid pour les actions suivantes : matrice, disques, conteneurs, alertes, et un résumé prêt à envoyer.",
+        "de": "Liest den Unraid-Server für die nächsten Aktionen: Array, Festplatten, Container, Warnungen und eine fertige Zusammenfassung.",
+        "es": "Lee el servidor Unraid para las acciones siguientes: array, discos, contenedores, alertas y un resumen listo para enviar."
+      },
+      "timeout_seconds": 30,
+      "outputs": [
+        {
+          "key": "online",
           "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "label": {
+            "en": "Answers",
+            "fr": "Répond",
+            "de": "Antwortet",
+            "es": "Responde"
+          }
+        },
+        {
+          "key": "summary",
+          "type": "string",
+          "label": {
+            "en": "Summary",
+            "fr": "Résumé",
+            "de": "Zusammenfassung",
+            "es": "Resumen"
+          }
+        },
+        {
+          "key": "array_state",
+          "type": "string",
+          "label": {
+            "en": "Array state",
+            "fr": "État de la matrice",
+            "de": "Array-Status",
+            "es": "Estado del array"
+          }
+        },
+        {
+          "key": "disk_problems",
+          "type": "number",
+          "label": {
+            "en": "Disks needing attention",
+            "fr": "Disques à surveiller",
+            "de": "Auffällige Festplatten",
+            "es": "Discos que requieren atención"
+          }
+        },
+        {
+          "key": "cpu",
+          "type": "number",
+          "label": {
+            "en": "CPU (%)",
+            "fr": "Processeur (%)",
+            "de": "Prozessor (%)",
+            "es": "Procesador (%)"
+          }
+        },
+        {
+          "key": "memory",
+          "type": "number",
+          "label": {
+            "en": "Memory (%)",
+            "fr": "Mémoire (%)",
+            "de": "Arbeitsspeicher (%)",
+            "es": "Memoria (%)"
+          }
+        },
+        {
+          "key": "containers_running",
+          "type": "number",
+          "label": {
+            "en": "Containers running",
+            "fr": "Conteneurs en marche",
+            "de": "Laufende Container",
+            "es": "Contenedores en marcha"
+          }
+        },
+        {
+          "key": "unread_alerts",
+          "type": "number",
+          "label": {
+            "en": "Unread alerts",
+            "fr": "Alertes non lues",
+            "de": "Ungelesene Warnungen",
+            "es": "Alertas sin leer"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "unraid",
+      "label": {
+        "en": "Unraid",
+        "fr": "Unraid",
+        "de": "Unraid",
+        "es": "Unraid"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "Array, parity, disks, containers, VMs and alerts at a glance, buttons for one container or VM.",
+        "fr": "Matrice, parité, disques, conteneurs, VM, alertes d'un coup d'œil ; boutons pour un conteneur ou VM.",
+        "de": "Array, Parität, Festplatten, Container, VMs, Warnungen auf einen Blick; Tasten für Container/VM.",
+        "es": "Array, paridad, discos, contenedores, VM y alertas de un vistazo; botones para contenedor o VM."
+      },
+      "icon": "server",
+      "action_timeout_seconds": 60,
+      "settings": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "required": false,
+          "label": {
+            "en": "Container or VM for the buttons (optional)",
+            "fr": "Conteneur ou VM des boutons (facultatif)",
+            "de": "Container oder VM für die Tasten (optional)",
+            "es": "Contenedor o VM de los botones (opcional)"
+          },
+          "description": {
+            "en": "Shows Start, Stop and Restart for this container or VM. Stop and Restart ask for a confirmation.",
+            "fr": "Affiche Démarrer, Arrêter et Redémarrer pour ce conteneur ou cette VM. Arrêter et Redémarrer demandent confirmation.",
+            "de": "Zeigt Starten, Stoppen und Neu starten für diesen Container oder diese VM. Stoppen und Neu starten fragen nach.",
+            "es": "Muestra Iniciar, Detener y Reiniciar para este contenedor o VM. Detener y Reiniciar piden confirmación."
+          }
+        }
+      ]
     }
   ]
 }
