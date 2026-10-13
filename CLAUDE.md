@@ -16,8 +16,8 @@ its only runtime dependency. It started from the official JavaScript template.
 ```bash
 npm install
 npm test                                  # node --test, the built-in runner
-node --test test/devices.test.js          # one file
-node --test --test-name-pattern "plug"    # tests whose name matches
+node --test test/hub.test.js              # one file
+node --test --test-name-pattern "parity"  # tests whose name matches
 npm run lint                              # ESLint
 npm run format:check                      # Prettier, as the CI runs it
 npm run format                            # Prettier, fix in place
@@ -32,15 +32,23 @@ pushing.
 
 ```
 index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
+src/app.js                        registers every SDK handler on the hub (index.js and tests share it)
+src/hub.js                        the server record: reads on a timer, states, transports, events, commands
+src/devices.js                    device types, feature blueprints, external ids, discovery payloads
+src/alerts.js                     scene-trigger bookkeeping (disks, parity, containers, notifications)
 src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/widgets.js                    the `unraid` dashboard widget (manifest `widgets`)
+src/texts.js                      every text sent to Gladys, in en/fr/de/es
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
-gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+src/store.js, src/logs.js         /data persistence, de-duplicated log lines
+src/unraid/http.js                the only network code (POST, no redirect followed)
+src/unraid/client.js              GraphQL client: redirects, errors, capabilities, groups, commands
+src/unraid/queries.js             the GraphQL documents, built from the server's capabilities
+src/unraid/model.js               API answers → snapshot (units, sleeping disks, Gladys' containers)
+gladys-assistant-integration.json manifest: name, config_schema, actions, triggers, widget...
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (mandatory)
+test/                             node --test, against the SDK's fake Gladys and a fake Unraid
+test/helpers/fakeUnraid.js        graphql-js on the schema subset (test/fixtures/unraid/)
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +78,9 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in four languages (English, French, German with
+  "du", Spanish with "usted"): action messages, manifest texts, feature names,
+  widget texts and `docs/{en,fr,de,es}.md`, kept in sync (`test/i18n.test.js`).
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -177,6 +186,95 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
 - Les filtres de scène ne font qu'égalité et appartenance : un seuil reste le travail d'un capteur.
 - **Les clés de widgets, de déclencheurs et d'actions sont figées une fois publiées.**
 - `gladys_version` `>=5.1.0` dès qu'il y a widgets, déclencheurs ou actions de scène.
+
+## Unraid (propre à ce dépôt)
+
+- **API lue** : l'API GraphQL officielle (`unraid-api`, dépôt `unraid/api`), intégrée à Unraid
+  **7.2+** (plugin Unraid Connect avant), `POST <serveur>/graphql`, en-tête `x-api-key`. Clé créée
+  dans Settings → Management Access → API Keys ; rôle **Viewer** pour lire, droits **Docker** et
+  **VMs** (`update:any`) pour les commandes. Mutations sur conteneur : `UPDATE_ANY` sur `DOCKER`.
+- **« Use SSL/TLS »** : « No » répond en HTTP ; « Yes » redirige en HTTPS même hôte (certificat
+  auto-signé : option « Accepter les certificats auto-signés ») ; « Strict » redirige vers
+  `https://<ip-en-tirets>.<hash>.myunraid.net`, nom que **beaucoup de box bloquent** (protection
+  DNS rebinding) → erreur `dns` dédiée. Le client ne suit que ces deux redirections (la clé part
+  avec chaque requête), repart de l'adresse saisie après un échec réseau, et passe en HTTPS sur le
+  400 « plain HTTP request was sent to HTTPS port » de nginx. Le hash `myunraid.net` n'est pas
+  écrit dans les logs (`hostForLog`).
+- **Introspection** : l'API refuse `__schema` (et l'opération `IntrospectionQuery`) hors de son
+  bac à sable, mais **accepte `__type(name:)`** : les champs disponibles sont lus ainsi
+  (`CAPABILITIES_QUERY`), toutes les 6 h, et à nouveau sur une erreur de validation ; en cas de
+  refus, client « permissif » (champs de l'API actuelle). Une requête qui nomme un champ inconnu
+  est refusée **entière** (HTTP 400, `GRAPHQL_VALIDATION_FAILED`, Apollo 4).
+- **Un `Query.<champ>` non nul qui échoue annule toute la réponse** (`data: null`) : une requête
+  par groupe (server, metrics, array, docker, vms, ups, notifications). Docker ou le gestionnaire
+  de VM arrêtés ne cassent que leur groupe ; seul l'échec du groupe `array` rend le serveur
+  illisible.
+- **Ne jamais réveiller un disque** : `disks { temperature }` et `metrics.temperature` passent
+  par `smartctl` (leçon de ha-unraid) ; seuls les emplacements de `array` sont lus (température
+  lue par emhttp, `null` pendant la veille, `isSpinning`). `test/queries.test.js` le fige.
+- **Pièges de l'API** : `parityCheckStatus.errors`, `running` et `paused` ne sont **pas remplis**
+  (seuls `status`, `progress`, `duration`, `date`, `speed` le sont) : les erreurs viennent de
+  `vars.sbSyncErrs`, l'opération de `vars.mdResyncAction` (`check P`, `recon D5`, `clear`).
+  `capacity.kilobytes` est en **chaînes**. Les `id` sont préfixés `<serverId>:` en sortie et
+  acceptés tels quels en entrée. `ArrayDisk.temp` vaut `null` pour un disque en veille.
+  `metrics.memory.percentTotal` est déjà hors cache. Les conteneurs sont tous listés (arrêtés
+  compris), avec `labels` ; le CPU et la mémoire par conteneur n'existent que par la
+  souscription `dockerContainerStats` (non lue). Aucune info de mise à jour d'Unraid lui-même.
+- **Identités** : emplacement de config (1) ; disque = **nom d'emplacement** (`disk3`, suit le slot
+  comme Unraid) ; conteneur = **nom** (l'id change à chaque mise à jour) ; VM = UUID ; onduleur =
+  id (haché s'il contient des espaces). Un appareil n'est jamais identifié par un id préfixé.
+- **Fonctionnalités « collantes »** : une fonctionnalité `optional` n'existe qu'une fois valuée,
+  puis reste (mémorisée dans `/data`, clé `seen`) : un groupe en échec ne change pas la structure
+  (pas de « Mettre à jour » qui clignote).
+- **Prudence des commandes** : conteneur start/stop/restart, VM start/stop (ACPI, jamais
+  `forceStop`) ; rien sur la matrice, la parité, le serveur. Les conteneurs de Gladys (image
+  `gladysassistant/gladys`, labels `io.gladysassistant.external-integration` /
+  `io.gladysassistant.container`) sont en lecture seule. Un arrêt demandé par Gladys ne déclenche
+  pas « Conteneur arrêté » (pas de boucle de scène). Stop et Restart du widget demandent
+  confirmation (`confirm: true`, présent dès 5.1.0).
+- **Non vérifié sur un vrai Unraid** (session sans matériel) : la réponse exacte à une clé
+  refusée (HTTP 401 ou erreur GraphQL `UNAUTHENTICATED`, les deux sont gérés), à un droit manquant
+  (`FORBIDDEN`), le format réel des `BigInt` (nombre ou chaîne, les deux sont lus), les champs
+  d'un vrai onduleur, la redirection `myunraid.net` sur un vrai réseau.
+- **Tests** : le faux Unraid exécute avec `graphql-js` (dépendance de dev) un **sous-ensemble du
+  schéma officiel** (`test/fixtures/unraid/schema.graphql` : noms de types et de champs seulement,
+  l'API est GPL-2.0) sur `tower.json`. Pour le régénérer depuis une version plus récente de
+  `api/generated-schema.graphql`, garder les mêmes types et sans descriptions.
+
+- **Relecture indépendante (13/10/2026)**, corrigé et figé par des tests : l'historique des
+  notifications gardait les plus anciennes (des notifications non lues revenaient dans la liste
+  et se redéclenchaient) ; un arrêt demandé par Gladys pouvait déclencher « Conteneur arrêté » avec
+  un intervalle de 5 min (fenêtre portée à deux lectures + 1 min, et relecture fraîche après la
+  commande) ; « Conteneur arrêté » exige deux lectures **et** une minute (une mise à jour à 15 s
+  d'intervalle) ; les conteneurs de Gladys sont aussi reconnus par leur **nom** (`gladys`,
+  `gladys-…`), l'image pouvant s'afficher en `sha256:` et `labels` manquer ; `vars` (erreurs de
+  parité) a sa propre requête, et une parité finie sans compteur lisible attend deux lectures avant
+  d'annoncer ; un enregistrement remplacé pendant l'envoi des événements ne publie plus rien.
+
+## Vérifié en Docker (sans vrai Unraid)
+
+Le 13/10/2026, image de l'intégration lancée avec les contraintes du bac à sable de Gladys
+(`--cap-drop ALL --security-opt no-new-privileges --read-only --memory 256m --pids-limit 256`,
+volume `/data`, réseau en pont `gladys-test-unraid`, aucun port publié), contre le faux Unraid du
+dépôt (`test/helpers/fakeUnraid.js`, graphql-js sur le sous-schéma officiel) servi en HTTP réel
+par un second conteneur verrouillé (script hors dépôt).
+
+- **Sans Gladys** : reconnexion du SDK en backoff, pas de plantage, ni jeton ni clé dans les logs,
+  ~20 Mo au repos, arrêt propre sur SIGTERM (code 0).
+- **Client réel** : sept groupes lus, capacités lues par `__type` ; clé refusée (`auth`), hôte
+  inconnu, port fermé, `https://` sur un port HTTP (`unreachable`), 502 (`api_down`), page HTML
+  (`not_unraid`), Docker arrêté (seul le groupe `docker` en erreur), clé en lecture seule
+  (`forbidden` sur une commande).
+- **Intégration complète** (faux Gladys du SDK, noms en français) : 16 appareils, 67 états à
+  l'ajout, textes d'état, badges, widget validé (`validateWidgetContent`), « Tester la
+  connexion », « État du serveur Unraid », redémarrage de plex et démarrage d'une VM reçus par le
+  serveur, arrêt du conteneur `gladys` refusé, texte « Démarrée · contrôle de parité 30 % »,
+  notification et « Conteneur arrêté » émis. Puis, **dans un second processus** (état gardé dans
+  `/data`, sans la clé) : le contrôle de parité terminé pendant l'arrêt est annoncé au démarrage
+  (`errors`, 5 erreurs, 121 min).
+- **Non vérifié** : un vrai Unraid (réponses exactes de l'API, `BigInt`, droits, onduleur réel),
+  les redirections « Yes »/« Strict » sur un vrai réseau, une vraie instance Gladys (rendu du
+  widget, éditeur de scènes).
 
 ## Store
 

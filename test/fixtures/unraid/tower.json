@@ -1,0 +1,270 @@
+{
+  "_source": "A realistic Unraid 7.2 server, in the shapes of the API. Slots, sizes, temperatures and parity counters come from the emhttp state files of the unraid/api repository (api/dev/states/disks.ini and var.ini, converted from KiB to KB as the API does), the UPS and notification texts from what Unraid writes. Serial numbers, ids and names are invented.",
+  "vars": {
+    "name": "Tower",
+    "version": "7.2.4",
+    "sbSyncErrs": 0,
+    "mdResync": 0,
+    "mdResyncCorr": "0",
+    "mdResyncPos": "0",
+    "mdResyncAction": "check P",
+    "mdState": "STARTED",
+    "fsState": "Started"
+  },
+  "info": {
+    "os": { "hostname": "Tower", "uptime": "2026-10-10T06:12:00.000Z" },
+    "cpu": { "packages": { "temp": [44], "totalPower": 21.4, "power": [21.4] } },
+    "versions": { "core": { "unraid": "7.2.4", "api": "4.37.5", "kernel": "6.12.24-Unraid" } }
+  },
+  "metrics": {
+    "cpu": { "percentTotal": 12.4 },
+    "memory": { "percentTotal": 37.5, "total": 34359738368, "available": 21474836480 }
+  },
+  "array": {
+    "state": "STARTED",
+    "capacity": {
+      "kilobytes": { "total": "41994745901", "used": "22498920329", "free": "19495825572" },
+      "disks": { "total": "3", "used": "3", "free": "0" }
+    },
+    "parityCheckStatus": {
+      "status": "COMPLETED",
+      "progress": 0,
+      "errors": null,
+      "running": null,
+      "paused": null,
+      "speed": "0",
+      "duration": 3197
+    },
+    "parities": [
+      {
+        "id": "4b2e9c1d7f3a:ST18000NM000J-2TV103_ZR5A0001",
+        "idx": 0,
+        "name": "parity",
+        "device": "sdh",
+        "status": "DISK_OK",
+        "type": "PARITY",
+        "temp": 31,
+        "numErrors": 0,
+        "size": 17578328012,
+        "fsSize": null,
+        "fsFree": null,
+        "fsUsed": null,
+        "isSpinning": true,
+        "rotational": true
+      }
+    ],
+    "disks": [
+      {
+        "id": "4b2e9c1d7f3a:ST18000NM000J-2TV103_ZR5A0002",
+        "idx": 1,
+        "name": "disk1",
+        "device": "sdf",
+        "status": "DISK_OK",
+        "type": "DATA",
+        "temp": 30,
+        "numErrors": 0,
+        "size": 17578328012,
+        "fsSize": 17998742753,
+        "fsFree": 13882739732,
+        "fsUsed": 4116003020,
+        "isSpinning": true,
+        "rotational": true
+      },
+      {
+        "id": "4b2e9c1d7f3a:WDC_WD120EDAZ-11F3RA0_5PJ00003",
+        "idx": 2,
+        "name": "disk2",
+        "device": "sdd",
+        "status": "DISK_OK",
+        "type": "DATA",
+        "temp": 34,
+        "numErrors": 0,
+        "size": 11718885324,
+        "fsSize": 11998001574,
+        "fsFree": 93140746,
+        "fsUsed": 11904860828,
+        "isSpinning": true,
+        "rotational": true
+      },
+      {
+        "id": "4b2e9c1d7f3a:WDC_WD120EMAZ-11BLFA0_5PH00004",
+        "idx": 3,
+        "name": "disk3",
+        "device": "sde",
+        "status": "DISK_OK",
+        "type": "DATA",
+        "temp": null,
+        "numErrors": 0,
+        "size": 11718885324,
+        "fsSize": 11998001574,
+        "fsFree": 5519945093,
+        "fsUsed": 6478056481,
+        "isSpinning": false,
+        "rotational": true
+      }
+    ],
+    "caches": [
+      {
+        "id": "4b2e9c1d7f3a:Samsung_SSD_850_EVO_250GB_S2R500000000005",
+        "idx": 30,
+        "name": "cache",
+        "device": "sdb",
+        "status": "DISK_OK",
+        "type": "CACHE",
+        "temp": 22,
+        "numErrors": 0,
+        "size": 244198552,
+        "fsSize": 250059317,
+        "fsFree": 112785490,
+        "fsUsed": 137273827,
+        "isSpinning": true,
+        "rotational": false
+      },
+      {
+        "id": "4b2e9c1d7f3a:KINGSTON_SA2000M8250G_50026B7200000006",
+        "idx": 31,
+        "name": "cache2",
+        "device": "nvme0n1",
+        "status": "DISK_OK",
+        "type": "CACHE",
+        "temp": 27,
+        "numErrors": 0,
+        "size": 244198552,
+        "fsSize": null,
+        "fsFree": null,
+        "fsUsed": null,
+        "isSpinning": true,
+        "rotational": false
+      }
+    ]
+  },
+  "docker": {
+    "containers": [
+      {
+        "id": "4b2e9c1d7f3a:3f1a9e0c5b7d2e4f6a8b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f",
+        "names": ["/plex"],
+        "image": "plexinc/pms-docker:latest",
+        "created": 1759900000,
+        "state": "RUNNING",
+        "status": "Up 2 days",
+        "autoStart": true,
+        "isUpdateAvailable": false,
+        "labels": {
+          "net.unraid.docker.managed": "dockerman",
+          "net.unraid.docker.webui": "http://[IP]:[PORT:32400]/web"
+        }
+      },
+      {
+        "id": "4b2e9c1d7f3a:a1b2c3d4e5f60718293a4b5c6d7e8f9001122334455667788990aabbccddeeff00",
+        "names": ["/sonarr"],
+        "image": "lscr.io/linuxserver/sonarr:latest",
+        "created": 1759900100,
+        "state": "RUNNING",
+        "status": "Up 2 days",
+        "autoStart": true,
+        "isUpdateAvailable": true,
+        "labels": { "net.unraid.docker.managed": "dockerman" }
+      },
+      {
+        "id": "4b2e9c1d7f3a:b2c3d4e5f6a70819203a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
+        "names": ["/radarr"],
+        "image": "lscr.io/linuxserver/radarr:latest",
+        "created": 1759900200,
+        "state": "EXITED",
+        "status": "Exited (0) 5 days ago",
+        "autoStart": false,
+        "isUpdateAvailable": false,
+        "labels": { "net.unraid.docker.managed": "dockerman" }
+      },
+      {
+        "id": "4b2e9c1d7f3a:c3d4e5f6a7b8091a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192",
+        "names": ["/mariadb"],
+        "image": "lscr.io/linuxserver/mariadb:latest",
+        "created": 1759900300,
+        "state": "RUNNING",
+        "status": "Up 2 days",
+        "autoStart": true,
+        "isUpdateAvailable": false,
+        "labels": { "net.unraid.docker.managed": "dockerman" }
+      },
+      {
+        "id": "4b2e9c1d7f3a:d4e5f6a7b8c90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293",
+        "names": ["/gladys"],
+        "image": "gladysassistant/gladys:v4",
+        "created": 1759900400,
+        "state": "RUNNING",
+        "status": "Up 2 days",
+        "autoStart": true,
+        "isUpdateAvailable": false,
+        "labels": { "net.unraid.docker.managed": "dockerman" }
+      },
+      {
+        "id": "4b2e9c1d7f3a:e5f6a7b8c9d00a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b",
+        "names": ["/gladys-unraid-1a2b"],
+        "image": "ghcr.io/guim31/gladys-unraid:1.0.0",
+        "created": 1759900500,
+        "state": "RUNNING",
+        "status": "Up 2 days",
+        "autoStart": false,
+        "isUpdateAvailable": false,
+        "labels": { "io.gladysassistant.external-integration": "unraid-1a2b" }
+      }
+    ]
+  },
+  "vms": {
+    "domains": [
+      {
+        "id": "4b2e9c1d7f3a:5f3c7a9e-1b2d-4e6f-8a0b-1c2d3e4f5a6b",
+        "name": "Windows 11",
+        "state": "RUNNING"
+      },
+      {
+        "id": "4b2e9c1d7f3a:8e2d4c6b-0a1f-4b3e-9d5c-7f6e5d4c3b2a",
+        "name": "Home Assistant OS",
+        "state": "SHUTOFF"
+      }
+    ]
+  },
+  "upsDevices": [
+    {
+      "id": "Back-UPS Pro 1500",
+      "name": "APC",
+      "model": "Back-UPS Pro 1500",
+      "status": "ONLINE",
+      "battery": { "chargeLevel": 100, "estimatedRuntime": 2880, "health": "Good" },
+      "power": {
+        "inputVoltage": 230,
+        "outputVoltage": 230,
+        "loadPercentage": 18,
+        "nominalPower": 865,
+        "currentPower": 155.7
+      }
+    }
+  ],
+  "notifications": {
+    "overview": {
+      "unread": { "info": 1, "warning": 1, "alert": 0, "total": 2 },
+      "archive": { "info": 12, "warning": 2, "alert": 0, "total": 14 }
+    },
+    "list": [
+      {
+        "id": "4b2e9c1d7f3a:Unraid_Parity_check_1760320000.notify",
+        "title": "Unraid Parity check",
+        "subject": "Notice [TOWER] - Parity check finished (0 errors)",
+        "description": "Duration: 19 hours, 12 minutes, 3 seconds. Average speed: 260.1 MB/s",
+        "importance": "INFO",
+        "type": "UNREAD",
+        "timestamp": "2026-10-13T02:13:20.000Z"
+      },
+      {
+        "id": "4b2e9c1d7f3a:Unraid_Status_1760334400.notify",
+        "title": "Unraid Status",
+        "subject": "Warning [TOWER] - Docker image disk utilization of 82%",
+        "description": "Docker utilization of image file /mnt/user/system/docker/docker.img",
+        "importance": "WARNING",
+        "type": "UNREAD",
+        "timestamp": "2026-10-13T06:13:20.000Z"
+      }
+    ]
+  }
+}

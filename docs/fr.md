@@ -1,67 +1,263 @@
-# Template de démonstration
+# Unraid
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+[Unraid](https://unraid.net/) est le système de nombreux NAS et serveurs
+domestiques : une matrice de disques protégée par la parité, des conteneurs
+Docker et des machines virtuelles. Cette intégration lit votre serveur Unraid
+par son **API officielle** et l'amène dans Gladys : le serveur lui-même, et les
+disques, conteneurs, VM et onduleur que vous choisissez. Les scènes peuvent
+réagir quand un disque tombe en erreur ou chauffe, quand un contrôle de parité
+se termine, quand un conteneur s'arrête ou quand Unraid publie une
+notification ; elles peuvent démarrer, arrêter ou redémarrer un conteneur ou une
+VM. Un widget résume le serveur sur le tableau de bord. Tout reste sur votre
+réseau local.
 
-## Ce que vous obtenez
+**Développée sans accès à un vrai serveur Unraid** : construite à partir du
+schéma officiel de l'API et testée contre un serveur simulé. Vos retours sont
+les bienvenus sur [les issues](https://github.com/guim31/gladys-unraid/issues).
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+## Ce qu'il vous faut
 
-## Configuration
+- Gladys Assistant 5.1.0 ou plus récent.
+- Unraid **7.2 ou plus récent** : son API y est intégrée. Unraid 6.x n'a pas
+  cette API et n'est pas pris en charge ; Unraid 7.0 et 7.1 peuvent fonctionner
+  avec le plugin Unraid Connect, sans garantie (non testé).
+- Le serveur Unraid joignable depuis la machine de Gladys (l'adresse de son
+  interface web).
 
-1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+Lire le serveur **ne réveille jamais un disque en veille** : les températures
+viennent de ce qu'Unraid sait déjà, et un disque en veille n'en a simplement
+pas.
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+## Mise en route
 
-## Actions
+### 1. Créer une clé d'API
 
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
+Dans l'interface web d'Unraid : **Settings → Management Access → API Keys →
+Create**. Donnez-lui un nom (`Gladys`) et :
 
-## Scènes
+- le rôle **Viewer**, pour surveiller le serveur (lecture seule) ;
+- pour démarrer, arrêter et redémarrer conteneurs et VM depuis Gladys, aussi
+  les droits **Docker** et **VMs** avec l'action de mise à jour (update). Sans
+  eux, Unraid refuse chaque commande et Gladys le dit.
 
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
+Copiez la clé : Unraid ne l'affiche qu'une fois.
 
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
+### 2. Configurer l'intégration
+
+Dans Gladys, **Intégrations → Unraid → Configuration** :
+
+- **Adresse** : l'adresse de l'interface web d'Unraid, comme dans votre
+  navigateur (`192.168.1.10`, `tower.local`, `https://192.168.1.10`).
+  L'intégration suit les redirections « Use SSL/TLS » d'Unraid : vers le HTTPS
+  à la même adresse, ou vers votre adresse `myunraid.net`.
+- **Clé d'API** : la clé créée plus haut.
+- **Nom** (facultatif) : le nom du serveur dans Gladys ; vide, le nom du serveur
+  Unraid.
+- **Accepter les certificats auto-signés** : à cocher quand « Use SSL/TLS » vaut
+  « Yes » dans Unraid (son certificat est auto-signé).
+- **Intervalle de rafraîchissement** : de 15 secondes à 5 minutes (1 minute par
+  défaut).
+- **Langue des noms et des textes** : les noms donnés aux fonctionnalités, les
+  textes d'état et les textes des événements de scène (français par défaut).
+
+Enregistrez, puis **Tester la connexion** : le serveur est lu et l'intégration
+indique ce qu'elle trouve (version d'Unraid, disques, conteneurs, VM, onduleur).
+
+### 3. Ajouter les appareils
+
+Ouvrez l'onglet **Découverte** de l'intégration : le serveur, ses disques, ses
+conteneurs, ses VM et son onduleur y sont listés. Ajoutez ceux que vous voulez
+suivre ; les autres restent hors de Gladys (les déclencheurs de scène les
+surveillent quand même).
+
+## Les appareils
+
+### Le serveur
+
+| Fonctionnalité                    | Valeur                                                                     |
+| --------------------------------- | -------------------------------------------------------------------------- |
+| En ligne                          | 1 tant qu'Unraid répond, 0 après deux lectures en échec                    |
+| Processeur                        | utilisation du processeur, %                                               |
+| Mémoire                           | mémoire utilisée (hors cache), %                                           |
+| Température du processeur         | le processeur le plus chaud, °C                                            |
+| Durée de fonctionnement           | jours depuis le dernier démarrage                                          |
+| Matrice démarrée                  | 1 démarrée, 0 arrêtée                                                      |
+| État de la matrice                | texte : « Démarrée », « Arrêtée », « Démarrée · contrôle de parité 45 % »… |
+| Espace utilisé de la matrice      | %                                                                          |
+| Espace libre de la matrice        | téraoctets                                                                 |
+| Progression du contrôle de parité | % pendant un contrôle, une reconstruction ou un effacement, 0 sinon        |
+| Erreurs de parité                 | erreurs du contrôle en cours ou du dernier                                 |
+| Disques à surveiller              | disques qui ne sont pas « normaux », ou avec des erreurs de lecture        |
+| Alertes non lues                  | notifications Unraid non lues de niveau alerte ou avertissement            |
+| Mises à jour de conteneurs        | conteneurs dont une image plus récente existe                              |
+| Version d'Unraid                  | texte                                                                      |
+
+Une fonctionnalité que le serveur ne peut pas donner (API plus ancienne, pas de
+sonde de processeur) n'est pas créée.
+
+### Disques
+
+Un appareil par emplacement de la matrice : parité, disques de données, disques
+des pools (cache). L'appareil suit l'emplacement (`Disk 3`), comme Unraid : un
+disque remplacé garde son appareil et son historique.
+
+| Fonctionnalité | Valeur                                                                          |
+| -------------- | ------------------------------------------------------------------------------- |
+| Température    | °C, quand le disque tourne ; rien pendant sa veille                             |
+| En veille      | 1 en veille, 0 en rotation (disques durs seulement)                             |
+| Espace utilisé | % (pas sur les disques de parité)                                               |
+| Espace libre   | gigaoctets (pas sur les disques de parité)                                      |
+| Erreurs        | erreurs de lecture comptées par Unraid depuis le dernier démarrage              |
+| État           | texte : « Normal », « Désactivé », « Manquant », « Émulé », « Mauvais disque »… |
+
+### Conteneurs
+
+Un appareil par conteneur Docker, au nom du conteneur (son identité : une mise à
+jour recrée le conteneur et garde l'appareil).
+
+| Fonctionnalité         | Valeur                                                        |
+| ---------------------- | ------------------------------------------------------------- |
+| En marche              | interrupteur : allumé démarre le conteneur, éteint l'arrête   |
+| Mise à jour disponible | 1 quand une image plus récente existe (vérification d'Unraid) |
+
+Les conteneurs de Gladys elle-même (Gladys et ses intégrations) sont en lecture
+seule : Gladys ne s'arrête jamais elle-même d'ici. Le processeur et la mémoire
+par conteneur ne sont pas donnés par l'API sans connexion permanente : non pris
+en charge.
+
+### Machines virtuelles
+
+| Fonctionnalité | Valeur                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------- |
+| En marche      | interrupteur : allumé démarre la VM, éteint l'arrête proprement (bouton d'alimentation) |
+| État           | texte : « En marche », « Arrêtée », « En pause », « En cours d'arrêt », « Plantée »…    |
+
+Éteindre une VM demande à son système de s'arrêter, comme le bouton
+d'alimentation : jamais un arrêt forcé. Une VM qui l'ignore continue de tourner.
+
+### Onduleur
+
+Quand Unraid gère un onduleur (Settings → UPS Settings) :
+
+| Fonctionnalité     | Valeur                                     |
+| ------------------ | ------------------------------------------ |
+| Batterie           | charge, %                                  |
+| Autonomie restante | minutes sur batterie                       |
+| Charge             | %                                          |
+| Sur batterie       | 1 sur batterie, 0 sur secteur              |
+| Puissance          | watts consommés, quand l'onduleur le donne |
+| Tension d'entrée   | volts                                      |
+| État               | texte donné par l'onduleur (« ONLINE »…)   |
 
 ## Tableau de bord
 
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
+Le widget **Unraid** montre le serveur d'un coup d'œil : processeur, mémoire et
+espace utilisé de la matrice, puis une liste avec d'abord ce qui demande votre
+attention (un disque en difficulté, un disque qu'Unraid juge plein, un disque
+chaud, un conteneur à démarrage automatique qui ne tourne pas, l'onduleur sur
+batterie, des alertes non lues), puis la matrice, le dernier contrôle de parité,
+les disques, les conteneurs, les VM, l'onduleur et les mises à jour de
+conteneurs.
+
+Dans ses réglages, choisissez un conteneur ou une VM pour avoir ses boutons :
+**Démarrer**, **Arrêter** et **Redémarrer** (conteneurs seulement) ; Arrêter et
+Redémarrer demandent confirmation. Sans choix, un bouton **Actualiser** relit le
+serveur.
+
+## Scènes
+
+### Déclencheurs
+
+- **Disque Unraid en erreur** : un disque de la matrice devient désactivé,
+  manquant ou émulé, ou ses erreurs de lecture augmentent. Filtre : un disque
+  (vide : n'importe lequel). Informations transmises : nom du serveur, nom du
+  disque, état du disque, erreurs de lecture.
+- **Disque Unraid trop chaud** : un disque atteint la température choisie (40 à
+  70 °C), sur deux lectures de suite ; annoncé de nouveau une fois redescendu
+  3 °C en dessous, et pas deux fois en 30 minutes. Un disque en veille n'est
+  jamais réveillé pour la lire. Informations transmises : nom du serveur, nom du
+  disque, température, seuil.
+- **Contrôle de parité Unraid terminé** : un contrôle de parité, une
+  reconstruction ou un effacement de disque est terminé. Filtre : le résultat
+  (sans erreur, avec erreurs, arrêté avant la fin). Informations transmises : nom
+  du serveur, résultat, erreurs trouvées, durée en minutes, opération. Un
+  contrôle qui se termine pendant que Gladys est arrêtée est annoncé à la lecture
+  suivante.
+- **Conteneur Unraid arrêté** : un conteneur qui tournait s'est arrêté ou a été
+  supprimé, sur deux lectures de suite et depuis une minute au moins (une mise à
+  jour le recrée en quelques secondes), et pas par Gladys. Filtre : un conteneur (vide : n'importe lequel).
+  Informations transmises : nom du serveur, nom du conteneur, état.
+- **Notification Unraid** : Unraid a publié une nouvelle notification
+  (avertissements SMART, températures, événements de la matrice, mises à jour,
+  disque presque plein…). Filtre : l'importance (alerte, avertissement,
+  information ; vide : toutes). Informations transmises : nom du serveur,
+  importance, titre, sujet, description. Les notifications présentes au
+  démarrage de l'intégration ne sont pas annoncées.
+
+Les états et températures des disques sont aussi des fonctionnalités : pour un
+seuil à vous, utilisez une condition sur la fonctionnalité.
+
+### Actions
+
+- **Piloter un conteneur Unraid** : démarre, arrête ou redémarre un conteneur.
+  Sortie : le nom du conteneur.
+- **Piloter une VM Unraid** : démarre une VM, ou l'éteint proprement. Sortie : le
+  nom de la VM.
+- **État du serveur Unraid** : lit le serveur pour les actions suivantes.
+  Sorties : répond (oui/non), un résumé prêt à envoyer (« Matrice : Démarrée.
+  6 disque(s) OK. 12/14 conteneur(s) en marche. »), état de la matrice, disques à
+  surveiller, processeur, mémoire, conteneurs en marche, alertes non lues.
+
+Rien n'arrête la matrice ni le serveur depuis Gladys : trop risqué pour une
+scène ou une commande vocale. Passez par l'interface d'Unraid pour cela.
+
+### Idées de scènes
+
+- **Contrôle de parité terminé** avec erreurs → envoyez-vous un message :
+  « Contrôle de parité : {erreurs} erreurs en {durée} minutes ».
+- **Notification Unraid**, importance alerte → une notification sur votre
+  téléphone avec son sujet.
+- Chaque nuit à 4 h → **Piloter un conteneur Unraid** : redémarrer le conteneur
+  qui en a besoin (un serveur multimédia figé, un VPN).
+- **Disque Unraid trop chaud**, 50 °C → allumer le ventilateur du placard.
+- Chaque matin → **État du serveur Unraid**, puis envoyer son résumé.
 
 ## Dépannage
 
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+- **« Clé d'API refusée »** : la clé a été supprimée ou mal copiée. Créez-en une
+  nouvelle dans Settings → Management Access → API Keys.
+- **« Aucune API Unraid à cette adresse »** : Unraid antérieur à 7.2 (sans le
+  plugin Unraid Connect), ou l'adresse d'un autre service.
+- **« L'API d'Unraid ne répond pas »** : l'interface web répond, pas l'API
+  derrière elle : Unraid démarre, ou l'API s'est arrêtée (`unraid-api restart`
+  dans un terminal).
+- **« Certificat refusé »** : « Use SSL/TLS » vaut « Yes » : cochez « Accepter
+  les certificats auto-signés ».
+- **« Votre DNS bloque myunraid.net »** : avec « Use SSL/TLS » sur « Strict »,
+  Unraid redirige vers une adresse `myunraid.net` que beaucoup de box bloquent
+  (protection contre le DNS rebinding). Saisissez `https://` et l'IP du serveur,
+  et cochez « Accepter les certificats auto-signés » ; ou autorisez
+  `myunraid.net` dans votre box.
+- **Une commande est refusée** : donnez à la clé d'API les droits Docker et VMs.
+- **Pas de température pour un disque** : il est en veille ; la température
+  revient quand il tourne.
+- **Un appareil affiche « Mettre à jour » dans Découverte** : une fonctionnalité
+  est apparue (un premier contrôle de parité, un champ ajouté à l'API). Mettez-le
+  à jour pour l'avoir.
+
+## Limites
+
+- Un seul serveur Unraid par installation.
+- Lecture toutes les 15 secondes à 5 minutes : un changement apparaît à la
+  lecture suivante.
+- Pas de processeur ni de mémoire par conteneur (l'API ne les donne que par une
+  connexion permanente), pas de trafic réseau, pas de partages.
+- Les mises à jour d'Unraid lui-même ne sont pas données par l'API : seules
+  celles des conteneurs le sont.
+- L'intégration ne garde dans `/data` que ce que comparent les déclencheurs de
+  scène (états des disques, conteneurs vus en marche, opération de parité en
+  cours, notifications déjà annoncées) et les fonctionnalités de chaque
+  appareil ; la clé d'API reste dans la configuration de Gladys et n'est jamais
+  écrite dans les logs.
+- Sans lien avec Lime Technology, Inc. Unraid est une marque de Lime Technology,
+  Inc.

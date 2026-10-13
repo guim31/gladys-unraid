@@ -1,33 +1,72 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeConfig, DEFAULT_CONFIG } from '../src/config.js';
+import { DEFAULT_CONFIG, normalizeConfig, parseServerUrl } from '../src/config.js';
 
-test('normalizeConfig returns the defaults when called with no argument', () => {
-  assert.deepEqual(normalizeConfig(), DEFAULT_CONFIG);
+test('the address: a bare IP or name, or the URL copied from the browser', () => {
+  assert.equal(parseServerUrl('192.0.2.10'), 'http://192.0.2.10');
+  assert.equal(parseServerUrl(' tower.local:8080 '), 'http://tower.local:8080');
+  assert.equal(parseServerUrl('https://192.0.2.10/Dashboard'), 'https://192.0.2.10');
+  assert.equal(
+    parseServerUrl('https://192-0-2-10.abcdef.myunraid.net/Main'),
+    'https://192-0-2-10.abcdef.myunraid.net',
+  );
+  assert.equal(parseServerUrl('http://[2001:db8::10]:8080'), 'http://[2001:db8::10]:8080');
 });
 
-test('normalizeConfig keeps user values over the defaults', () => {
-  const config = normalizeConfig({ latitude: 45.5, longitude: -73.6, unit: 'fahrenheit' });
-  assert.equal(config.latitude, 45.5);
-  assert.equal(config.longitude, -73.6);
-  assert.equal(config.unit, 'fahrenheit');
+test('unusable addresses, and credentials in an address, are refused', () => {
+  for (const raw of [
+    '',
+    '   ',
+    'ftp://192.0.2.10',
+    'http://',
+    'http://root:secret@192.0.2.10',
+    42,
+  ]) {
+    assert.equal(parseServerUrl(raw), null, String(raw));
+  }
 });
 
-test('normalizeConfig coerces numeric strings coming from a form', () => {
-  const config = normalizeConfig({ latitude: '48.8', longitude: '2.3', poll_frequency: '600' });
-  assert.equal(config.latitude, 48.8);
-  assert.equal(config.longitude, 2.3);
-  assert.equal(config.poll_frequency, 600);
-  assert.equal(typeof config.poll_frequency, 'number');
+test('the defaults, then a full configuration', () => {
+  assert.deepEqual(normalizeConfig({}), {
+    server: null,
+    invalidUrl: false,
+    missingKey: false,
+    allowSelfSigned: false,
+    pollIntervalMs: 60_000,
+    language: 'fr',
+  });
+  assert.equal(DEFAULT_CONFIG.language, 'fr');
+  const config = normalizeConfig({
+    url: 'https://192.0.2.10',
+    api_key: '  a1b2c3  ',
+    name: '  NAS  ',
+    allow_self_signed: 'true',
+    poll_interval: '15',
+    language: 'de',
+  });
+  assert.deepEqual(config.server, {
+    slot: 1,
+    url: 'https://192.0.2.10',
+    apiKey: 'a1b2c3',
+    name: 'NAS',
+  });
+  assert.equal(config.allowSelfSigned, true);
+  assert.equal(config.pollIntervalMs, 15_000);
+  assert.equal(config.language, 'de');
 });
 
-test('normalizeConfig falls back to the default for a missing numeric field', () => {
-  const config = normalizeConfig({ unit: 'celsius' });
-  assert.equal(config.poll_frequency, DEFAULT_CONFIG.poll_frequency);
-});
-
-test('GLADYS_PREFER_LOCAL defaults to true and only an explicit false disables it', () => {
-  assert.equal(normalizeConfig().GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: true }).GLADYS_PREFER_LOCAL, true);
-  assert.equal(normalizeConfig({ GLADYS_PREFER_LOCAL: false }).GLADYS_PREFER_LOCAL, false);
+test('what is missing is said: a bad address, no key', () => {
+  assert.equal(normalizeConfig({ url: 'ftp://x', api_key: 'k' }).invalidUrl, true);
+  const noKey = normalizeConfig({ url: '192.0.2.10' });
+  assert.equal(noKey.server, null);
+  assert.equal(noKey.missingKey, true);
+  // An interval or a language outside the lists falls back to the default.
+  const odd = normalizeConfig({
+    url: '192.0.2.10',
+    api_key: 'k',
+    poll_interval: '7',
+    language: 'it',
+  });
+  assert.equal(odd.pollIntervalMs, 60_000);
+  assert.equal(odd.language, 'fr');
 });
