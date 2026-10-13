@@ -241,6 +241,41 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
   l'API est GPL-2.0) sur `tower.json`. Pour le régénérer depuis une version plus récente de
   `api/generated-schema.graphql`, garder les mêmes types et sans descriptions.
 
+- **Relecture indépendante (13/10/2026)**, corrigé et figé par des tests : l'historique des
+  notifications gardait les plus anciennes (des notifications non lues revenaient dans la liste
+  et se redéclenchaient) ; un arrêt demandé par Gladys pouvait déclencher « Conteneur arrêté » avec
+  un intervalle de 5 min (fenêtre portée à deux lectures + 1 min, et relecture fraîche après la
+  commande) ; « Conteneur arrêté » exige deux lectures **et** une minute (une mise à jour à 15 s
+  d'intervalle) ; les conteneurs de Gladys sont aussi reconnus par leur **nom** (`gladys`,
+  `gladys-…`), l'image pouvant s'afficher en `sha256:` et `labels` manquer ; `vars` (erreurs de
+  parité) a sa propre requête, et une parité finie sans compteur lisible attend deux lectures avant
+  d'annoncer ; un enregistrement remplacé pendant l'envoi des événements ne publie plus rien.
+
+## Vérifié en Docker (sans vrai Unraid)
+
+Le 13/10/2026, image de l'intégration lancée avec les contraintes du bac à sable de Gladys
+(`--cap-drop ALL --security-opt no-new-privileges --read-only --memory 256m --pids-limit 256`,
+volume `/data`, réseau en pont `gladys-test-unraid`, aucun port publié), contre le faux Unraid du
+dépôt (`test/helpers/fakeUnraid.js`, graphql-js sur le sous-schéma officiel) servi en HTTP réel
+par un second conteneur verrouillé (script hors dépôt).
+
+- **Sans Gladys** : reconnexion du SDK en backoff, pas de plantage, ni jeton ni clé dans les logs,
+  ~20 Mo au repos, arrêt propre sur SIGTERM (code 0).
+- **Client réel** : sept groupes lus, capacités lues par `__type` ; clé refusée (`auth`), hôte
+  inconnu, port fermé, `https://` sur un port HTTP (`unreachable`), 502 (`api_down`), page HTML
+  (`not_unraid`), Docker arrêté (seul le groupe `docker` en erreur), clé en lecture seule
+  (`forbidden` sur une commande).
+- **Intégration complète** (faux Gladys du SDK, noms en français) : 16 appareils, 67 états à
+  l'ajout, textes d'état, badges, widget validé (`validateWidgetContent`), « Tester la
+  connexion », « État du serveur Unraid », redémarrage de plex et démarrage d'une VM reçus par le
+  serveur, arrêt du conteneur `gladys` refusé, texte « Démarrée · contrôle de parité 30 % »,
+  notification et « Conteneur arrêté » émis. Puis, **dans un second processus** (état gardé dans
+  `/data`, sans la clé) : le contrôle de parité terminé pendant l'arrêt est annoncé au démarrage
+  (`errors`, 5 erreurs, 121 min).
+- **Non vérifié** : un vrai Unraid (réponses exactes de l'API, `BigInt`, droits, onduleur réel),
+  les redirections « Yes »/« Strict » sur un vrai réseau, une vraie instance Gladys (rendu du
+  widget, éditeur de scènes).
+
 ## Store
 
 - Validateur officiel, depuis la racine : `npx -y github:GladysAssistant/integration-store .`

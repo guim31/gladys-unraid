@@ -30,6 +30,11 @@ export const TEMPERATURE_CONFIRM_READS = 2;
 export const TEMPERATURE_COOLDOWN_MS = 30 * 60_000;
 
 export const CONTAINER_CONFIRM_READS = 2;
+// …and that long at least: an update recreates a container in up to a minute.
+export const CONTAINER_CONFIRM_MS = 60_000;
+
+// Reads a finished parity operation waits for its error count.
+export const PARITY_WAIT_READS = 2;
 
 // Notification ids remembered, beyond the ones still unread.
 export const NOTIFICATIONS_REMEMBERED = 300;
@@ -59,7 +64,7 @@ export class Watcher {
         seen: strings(object(tables.notifications).seen),
       },
     };
-    /** Reads in a row a container was seen not running, by name. */
+    /** A container seen not running: reads in a row and since when, by name. */
     this.misses = new Map();
     /** Reads in a row a disk was at or above a step, by `key|step`. */
     this.highs = new Map();
@@ -146,6 +151,19 @@ export class Watcher {
       return null;
     }
     const previous = this.saved.parity;
+    const aborted = parity.status === 'CANCELLED' || parity.status === 'FAILED';
+    // Just ended, but the error count was not readable (the vars group
+    // failed): wait a read or two rather than announce a wrong "no error".
+    if (
+      previous?.active &&
+      !parity.active &&
+      !aborted &&
+      parity.errors === null &&
+      (previous.waited ?? 0) < PARITY_WAIT_READS
+    ) {
+      this.saved.parity = { ...previous, waited: (previous.waited ?? 0) + 1 };
+      return null;
+    }
     this.saved.parity = {
       active: parity.active,
       operation: parity.active ? parity.operation : (previous?.operation ?? parity.operation),
@@ -162,12 +180,11 @@ export class Watcher {
       return null;
     }
     const errors = parity.errors;
-    const result =
-      parity.status === 'CANCELLED' || parity.status === 'FAILED'
-        ? PARITY_RESULTS.ABORTED
-        : errors > 0
-          ? PARITY_RESULTS.ERRORS
-          : PARITY_RESULTS.OK;
+    const result = aborted
+      ? PARITY_RESULTS.ABORTED
+      : errors > 0
+        ? PARITY_RESULTS.ERRORS
+        : PARITY_RESULTS.OK;
     return {
       result,
       errors,
@@ -195,9 +212,10 @@ export class Watcher {
       if (!entry?.running) {
         return;
       }
-      const misses = (this.misses.get(name) ?? 0) + 1;
-      if (misses < CONTAINER_CONFIRM_READS) {
-        this.misses.set(name, misses);
+      const miss = this.misses.get(name) ?? { reads: 0, since: now };
+      miss.reads += 1;
+      if (miss.reads < CONTAINER_CONFIRM_READS || now - miss.since < CONTAINER_CONFIRM_MS) {
+        this.misses.set(name, miss);
         return;
       }
       this.misses.delete(name);
@@ -251,7 +269,8 @@ export class Watcher {
     const ids = unread.map((notification) => notification.id);
     const kept = new Set(ids);
     const older = table.seen.filter((id) => !kept.has(id));
-    table.seen = [...ids, ...older.slice(-Math.max(0, NOTIFICATIONS_REMEMBERED - ids.length))];
+    // `older` is most recent first: its head is what to keep.
+    table.seen = [...ids, ...older.slice(0, Math.max(0, NOTIFICATIONS_REMEMBERED - ids.length))];
     table.primed = true;
     if (!primed) {
       return [];

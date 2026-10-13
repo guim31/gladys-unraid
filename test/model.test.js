@@ -113,6 +113,10 @@ test('containers by name, Gladys own ones protected, VMs by UUID', () => {
   assert.equal(isGladysContainer({ image: 'gladysassistant/gladys:v4.60.0' }), true);
   assert.equal(isGladysContainer({ image: 'docker.io/gladysassistant/gladys' }), true);
   assert.equal(isGladysContainer({ image: 'someone/gladys-backup:latest' }), false);
+  // The image shown as a bare id after a pull, and no labels (an older API).
+  assert.equal(isGladysContainer({ name: 'gladys', image: 'sha256:0123abcd' }), true);
+  assert.equal(isGladysContainer({ name: 'gladys-unraid-1a2b', image: 'x' }), true);
+  assert.equal(isGladysContainer({ name: 'gladysfan', image: 'x' }), false);
 });
 
 test('the UPS: on mains, then on battery', () => {

@@ -184,8 +184,8 @@ serveur.
   contrôle qui se termine pendant que Gladys est arrêtée est annoncé à la lecture
   suivante.
 - **Conteneur Unraid arrêté** : un conteneur qui tournait s'est arrêté ou a été
-  supprimé, sur deux lectures de suite (une mise à jour le recrée en quelques
-  secondes), et pas par Gladys. Filtre : un conteneur (vide : n'importe lequel).
+  supprimé, sur deux lectures de suite et depuis une minute au moins (une mise à
+  jour le recrée en quelques secondes), et pas par Gladys. Filtre : un conteneur (vide : n'importe lequel).
   Informations transmises : nom du serveur, nom du conteneur, état.
 - **Notification Unraid** : Unraid a publié une nouvelle notification
   (avertissements SMART, températures, événements de la matrice, mises à jour,

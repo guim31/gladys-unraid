@@ -46,8 +46,16 @@ const list = (value) =>
 const GLADYS_LABELS = ['io.gladysassistant.external-integration', 'io.gladysassistant.container'];
 const GLADYS_IMAGE = /(^|\/)gladysassistant\/gladys(:|@|$)/;
 
+// The supervisor names its containers `gladys-<selector>[-<name>]`; the core
+// is usually `gladys`. The name stays when the image shows as a bare
+// `sha256:` id, and on APIs without `labels`.
+const GLADYS_NAME = /^gladys(-|$)/;
+
 /** Whether a container is Gladys itself or one of its integrations. */
-export function isGladysContainer({ image, labels }) {
+export function isGladysContainer({ name, image, labels }) {
+  if (typeof name === 'string' && GLADYS_NAME.test(name)) {
+    return true;
+  }
   if (typeof image === 'string' && GLADYS_IMAGE.test(image)) {
     return true;
   }
@@ -147,7 +155,7 @@ function parseContainer(raw) {
     running: state === 'RUNNING',
     autoStart: bool(raw.autoStart),
     updateAvailable: bool(raw.isUpdateAvailable),
-    protected: isGladysContainer({ image, labels: raw.labels }),
+    protected: isGladysContainer({ name, image, labels: raw.labels }),
   };
 }
 
@@ -221,7 +229,7 @@ function parseNotification(raw) {
 export function parseSnapshot({ groups }, now) {
   const data = (name) => groups[name]?.data ?? null;
   const server = data('server') ?? {};
-  const vars = server.vars ?? {};
+  const vars = data('vars')?.vars ?? server.vars ?? {};
   const info = server.info ?? {};
   const metrics = data('metrics')?.metrics ?? {};
   const array = data('array')?.array ?? {};

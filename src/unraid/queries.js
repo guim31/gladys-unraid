@@ -149,9 +149,12 @@ export function readQueries(caps) {
     }
     info = block('info', join([os, cpu, versions]));
   }
-  const server = join([vars, info]);
-  if (server) {
-    queries.server = `query UnraidServer { ${server} }`;
+  // Two requests: `info` failing must not take the parity counters with it.
+  if (info) {
+    queries.server = `query UnraidServer { ${info} }`;
+  }
+  if (vars) {
+    queries.vars = `query UnraidVars { ${vars} }`;
   }
 
   if (caps.has('Query', 'metrics')) {
@@ -229,7 +232,7 @@ export function readQueries(caps) {
       ? 'overview { unread { info warning alert total } }'
       : '';
     const list = caps.has('Notifications', 'list')
-      ? 'list(filter: { type: UNREAD, offset: 0, limit: 20 }) ' +
+      ? 'list(filter: { type: UNREAD, offset: 0, limit: 50 }) ' +
         '{ id title subject description importance timestamp }'
       : '';
     const body = join([overview, list]);

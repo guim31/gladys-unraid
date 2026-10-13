@@ -219,6 +219,7 @@ test('container stopped: on the second read, outside Gladys only', async (t) => 
   w.unraid.setContainer('plex', 'EXITED');
   await w.hub.pollAll();
   assert.equal(events(w, TRIGGERS.CONTAINER).length, 0, 'one read: being updated?');
+  w.clock.advance(61_000);
   await w.hub.pollAll();
   assert.deepEqual(
     events(w, TRIGGERS.CONTAINER).map((event) => event.data),
@@ -247,8 +248,10 @@ test('container stopped: on the second read, outside Gladys only', async (t) => 
     container: deviceId(w.gladys, 'container', 'mariadb'),
     command: 'stop',
   });
-  await w.hub.pollAll();
-  await w.hub.pollAll();
+  for (let read = 0; read < 3; read += 1) {
+    w.clock.advance(61_000);
+    await w.hub.pollAll();
+  }
   assert.equal(events(w, TRIGGERS.CONTAINER).length, 1);
 });
 

@@ -151,6 +151,7 @@ test('the scene triggers are the ones the hub fires, with their filters and vari
     timestamp: '2026-10-13T10:00:00.000Z',
   });
   await hub.pollAll();
+  world.clock.advance(61_000);
   await hub.pollAll();
   const fired = new Map(world.fake.sceneEvents.map((event) => [event.key, event.data]));
   for (const entry of manifest.scene_triggers) {

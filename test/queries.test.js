@@ -48,6 +48,7 @@ test('every document is valid for the current API', () => {
   const queries = readQueries(caps);
   assert.deepEqual(Object.keys(queries), [
     'server',
+    'vars',
     'metrics',
     'array',
     'docker',
@@ -83,7 +84,7 @@ test('an older API gets documents without the fields it lacks', () => {
   );
   const caps = capsOf(old);
   const queries = readQueries(caps);
-  assert.deepEqual(Object.keys(queries), ['server', 'array', 'docker', 'vms']);
+  assert.deepEqual(Object.keys(queries), ['server', 'vars', 'array', 'docker', 'vms']);
   for (const document of Object.values(queries)) {
     assert.deepEqual(errorsOf(old, document), [], document);
   }

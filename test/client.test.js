@@ -45,6 +45,7 @@ test('"Use SSL/TLS: No": HTTP, every group read', async () => {
     'notifications',
     'server',
     'ups',
+    'vars',
     'vms',
   ]);
   assert.ok(Object.values(groups).every((group) => group.data && !group.error));

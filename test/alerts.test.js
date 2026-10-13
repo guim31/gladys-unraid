@@ -128,11 +128,16 @@ test('a container stopped on two reads; one removed; one stopped by Gladys', () 
     Object.entries(states).map(([name, state]) => ({ name, state, running: state === 'RUNNING' }));
   watcher.containers(list({ plex: 'RUNNING', db: 'RUNNING', web: 'RUNNING' }), 0);
   assert.deepEqual(
-    watcher.containers(list({ plex: 'EXITED', web: 'EXITED' }), 1, (n) => n === 'web'),
+    watcher.containers(list({ plex: 'EXITED', web: 'EXITED' }), 60_000, (n) => n === 'web'),
+    [],
+  );
+  // Two reads, but within a minute of the first miss (an update at 15 s).
+  assert.deepEqual(
+    watcher.containers(list({ plex: 'EXITED', web: 'EXITED' }), 75_000, (n) => n === 'web'),
     [],
   );
   assert.deepEqual(
-    watcher.containers(list({ plex: 'EXITED', web: 'EXITED' }), 2, (n) => n === 'web'),
+    watcher.containers(list({ plex: 'EXITED', web: 'EXITED' }), 121_000, (n) => n === 'web'),
     [
       { name: 'plex', state: 'EXITED' },
       { name: 'db', state: 'absent' },
@@ -158,4 +163,39 @@ test('the tables survive a restart (they are what /data keeps)', () => {
   assert.equal(restored.saved.disks.disk1, undefined);
   // Garbage in /data is ignored.
   assert.doesNotThrow(() => new Watcher({ disks: 3, notifications: 'x', parity: 'y' }));
+});
+
+test('the notifications kept are the most recent ones', () => {
+  const watcher = new Watcher();
+  watcher.notifications([]);
+  // 40 unread, the API lists 20 of them; then 300 others came and went.
+  const unread = Array.from({ length: 40 }, (_, i) => ({ id: `n${i}` }));
+  watcher.notifications(unread.slice(0, 20));
+  watcher.notifications(unread.slice(20, 40));
+  for (let i = 0; i < 14; i += 1) {
+    watcher.notifications(Array.from({ length: 20 }, (_, j) => ({ id: `old${i}-${j}` })));
+  }
+  // The newest are archived: older unread ones come back in the list.
+  assert.deepEqual(watcher.notifications(unread.slice(20, 40)), [], 'already announced');
+});
+
+test('a parity check that ended without a readable error count waits for it', () => {
+  const watcher = new Watcher();
+  const parity = (status, errors) => ({
+    status,
+    active: status === 'RUNNING',
+    paused: false,
+    progress: 0,
+    errors,
+    operation: 'check',
+  });
+  watcher.parity(parity('RUNNING', 0), 0);
+  watcher.parity(parity('RUNNING', 0), 1);
+  assert.equal(watcher.parity(parity('COMPLETED', null), 2), null, 'waits');
+  assert.equal(watcher.parity(parity('COMPLETED', 4), 3).result, 'errors');
+  // Never readable: announced after two reads, errors unknown.
+  watcher.parity(parity('RUNNING', 0), 4);
+  assert.equal(watcher.parity(parity('COMPLETED', null), 5), null);
+  assert.equal(watcher.parity(parity('COMPLETED', null), 6), null);
+  assert.equal(watcher.parity(parity('COMPLETED', null), 7).errors, null);
 });

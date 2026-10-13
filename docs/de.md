@@ -186,8 +186,8 @@ Server neu.
   Prüfung, die endet, während Gladys gestoppt ist, wird bei der nächsten Abfrage
   gemeldet.
 - **Unraid-Container gestoppt**: Ein laufender Container wurde gestoppt oder
-  entfernt, bei zwei Abfragen in Folge (ein Update erstellt ihn in Sekunden neu),
-  und nicht durch Gladys. Filter: ein Container (leer: beliebig).
+  entfernt, bei zwei Abfragen in Folge und seit mindestens einer Minute (ein Update
+  erstellt ihn in Sekunden neu), und nicht durch Gladys. Filter: ein Container (leer: beliebig).
   Weitergegebene Informationen: Servername, Name des Containers, Zustand.
 - **Unraid-Benachrichtigung**: Unraid hat eine neue Benachrichtigung
   veröffentlicht (SMART-Warnungen, Temperaturen, Array-Ereignisse, Updates, eine

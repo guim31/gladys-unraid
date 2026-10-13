@@ -504,6 +504,10 @@ export class UnraidHub {
       this.saveState();
     }
     await this.fireTransitions(record, snapshot, now);
+    if (record.dropped) {
+      // Reconfigured while the events were sent: the new record takes over.
+      return false;
+    }
     this.watcher.forgetStale(now, this.timings.forgetAfterMs);
     for (const [name, until] of this.ownStops) {
       if (until <= now) {
@@ -935,7 +939,12 @@ export class UnraidHub {
     }
     if (type === DEVICE_TYPES.CONTAINER && command !== 'start') {
       // Its stop is Gladys' own: no "Container stopped" event for it.
-      this.ownStops.set(item.name, this.now() + this.timings.ownStopMs);
+      // Two regular reads at least must see it stopped: the window covers them.
+      const window = Math.max(
+        this.timings.ownStopMs,
+        2 * this.config.pollIntervalMs + this.timings.followUpMs + 60_000,
+      );
+      this.ownStops.set(item.name, this.now() + window);
     }
     try {
       if (type === DEVICE_TYPES.CONTAINER) {
@@ -951,7 +960,9 @@ export class UnraidHub {
       throw this.commandError(err);
     }
     logger.info(`${type} ${item.name}: ${command} requested`);
-    // The new state, now and a little later.
+    // The new state, now and a little later: a read started before the
+    // command may still show the old one, so wait for it and read again.
+    await record.polling?.catch(() => {});
     await this.afterChanges(await this.poll(record));
     this.scheduleFollowUp();
     return { name: item.name, type };

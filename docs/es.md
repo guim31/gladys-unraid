@@ -181,8 +181,8 @@ leer el servidor.
   duración en minutos, operación. Una comprobación que termina mientras Gladys
   está detenida se anuncia en la lectura siguiente.
 - **Contenedor de Unraid detenido**: un contenedor que estaba en marcha se ha
-  detenido o eliminado, en dos lecturas seguidas (una actualización lo recrea en
-  segundos), y no por Gladys. Filtro: un contenedor (vacío: cualquiera).
+  detenido o eliminado, en dos lecturas seguidas y desde hace un minuto al menos
+  (una actualización lo recrea en segundos), y no por Gladys. Filtro: un contenedor (vacío: cualquiera).
   Información transmitida: nombre del servidor, nombre del contenedor, estado.
 - **Notificación de Unraid**: Unraid ha publicado una nueva notificación
   (avisos SMART, temperaturas, eventos del array, actualizaciones, un disco casi

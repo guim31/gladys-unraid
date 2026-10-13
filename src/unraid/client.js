@@ -61,6 +61,7 @@ export class UnraidError extends Error {
 
 export const GROUPS = Object.freeze([
   'server',
+  'vars',
   'metrics',
   'array',
   'docker',

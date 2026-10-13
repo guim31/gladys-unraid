@@ -171,8 +171,8 @@ confirmation. Without a choice, a **Refresh** button reads the server again.
   minutes, operation. A check that ends while Gladys is stopped is announced
   at the next read.
 - **Unraid container stopped**: a container that was running stopped or was
-  removed, on two reads in a row (an update recreates it within seconds), and
-  not by Gladys. Filter: a container (empty: any). Information passed on:
+  removed, on two reads in a row and for a minute at least (an update recreates
+  it within seconds), and not by Gladys. Filter: a container (empty: any). Information passed on:
   server name, container name, state.
 - **Unraid notification**: Unraid posted a new notification (SMART warnings,
   temperatures, array events, updates, a disk almost full…). Filter: the
