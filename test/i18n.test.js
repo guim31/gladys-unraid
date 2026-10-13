@@ -264,9 +264,11 @@ test('the German documentation says "du"', () => {
   assert.deepEqual(polite, []);
 });
 
-test('the documentation says it was developed without the hardware, and where to give feedback', () => {
-  assert.match(docs.en, /Developed without access to a real Unraid server/);
-  assert.match(docs.fr, /Développée sans accès à un vrai serveur Unraid/);
+test('the documentation says it was tested on a real server, and where to give feedback', () => {
+  assert.match(docs.en, /Tested on a real Unraid server/);
+  assert.match(docs.fr, /Testée sur un vrai serveur Unraid/);
+  assert.match(docs.de, /Auf einem echten Unraid-Server getestet/);
+  assert.match(docs.es, /Probada en un servidor Unraid real/);
   for (const lang of LANGS) {
     assert.match(docs[lang], /github\.com\/guim31\/gladys-unraid\/issues/);
     assert.match(docs[lang], /Lime Technology/);
