@@ -10,8 +10,8 @@ contenedor se detiene o cuando Unraid publica una notificación; pueden iniciar,
 detener o reiniciar un contenedor o una VM. Un widget resume el servidor en el
 panel. Todo se queda en su red local.
 
-**Desarrollada sin acceso a un servidor Unraid real**: construida a partir del
-esquema oficial de la API y probada contra un servidor simulado. Sus comentarios
+**Probada en un servidor Unraid real** por el autor, además de las pruebas
+automáticas contra un servidor simulado. Sus comentarios
 son bienvenidos en [las issues](https://github.com/guim31/gladys-unraid/issues).
 
 ## Lo que necesita

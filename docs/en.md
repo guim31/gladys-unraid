@@ -9,8 +9,8 @@ parity check ends, when a container stops or when Unraid posts a notification;
 they can start, stop or restart a container or a VM. A dashboard widget sums
 the server up. Everything stays on your local network.
 
-**Developed without access to a real Unraid server**: built from the official
-API schema and tested against a simulated server. Feedback welcome on
+**Tested on a real Unraid server** by the author, on top of the automated tests
+against a simulated server. Feedback welcome on
 [the issues](https://github.com/guim31/gladys-unraid/issues).
 
 ## What you need

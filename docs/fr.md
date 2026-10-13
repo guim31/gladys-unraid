@@ -11,8 +11,8 @@ notification ; elles peuvent démarrer, arrêter ou redémarrer un conteneur ou 
 VM. Un widget résume le serveur sur le tableau de bord. Tout reste sur votre
 réseau local.
 
-**Développée sans accès à un vrai serveur Unraid** : construite à partir du
-schéma officiel de l'API et testée contre un serveur simulé. Vos retours sont
+**Testée sur un vrai serveur Unraid** par l'auteur, en plus des tests
+automatiques contre un serveur simulé. Vos retours sont
 les bienvenus sur [les issues](https://github.com/guim31/gladys-unraid/issues).
 
 ## Ce qu'il vous faut

@@ -7,9 +7,9 @@ API. Scenes react to a disk in error or too hot, a parity check that ends, a
 container that stops and Unraid's own notifications; they start, stop and
 restart containers and VMs. A dashboard widget sums the server up.
 
-**Developed without access to a real Unraid server**: built from the official
-API schema and tested against a simulated server running that schema.
-Feedback welcome in the [issues](https://github.com/guim31/gladys-unraid/issues).
+**Tested on a real Unraid server** by the author, on top of the automated tests
+against a simulated server running the official API schema. Feedback welcome in
+the [issues](https://github.com/guim31/gladys-unraid/issues).
 
 ## Features
 
@@ -84,13 +84,14 @@ notifications already announced) and the features each device had.
 
 ## Checked, and what was not
 
-- A real Unraid server: **not checked**. The integration was built from the
+- A real Unraid server: **checked** by the author on their own server, where
+  everything works. The integration was built from the
   official API schema (`unraid/api`, API 4.37.5) and from the emhttp state
   files of that repository, and tested against a fake Unraid executing the
   schema subset it reads (`test/helpers/fakeUnraid.js`), in the Gladys sandbox
   (read-only root file system, no capabilities, 256 MB) through a real HTTP
   server.
-- Not checked either: the exact HTTP answer of the API to a refused key or a
+- Not checked specifically: the exact HTTP answer of the API to a refused key or a
   missing permission (both an HTTP status and a GraphQL error are handled),
   the `myunraid.net` redirect on a real network, the UPS fields on a real UPS,
   a real Gladys instance (widget rendering, scene editor).
