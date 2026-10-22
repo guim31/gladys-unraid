@@ -8,8 +8,8 @@
     "de": "Unraid-Server: Array, Parität, Festplatten, Docker-Container, VMs, USV und Warnungen in Gladys.",
     "es": "Servidor Unraid: array, paridad, discos, contenedores Docker, VM, SAI y alertas en Gladys."
   },
-  "version": "1.0.1",
-  "docker_image": "ghcr.io/guim31/gladys-unraid:1.0.1",
+  "version": "1.0.2",
+  "docker_image": "ghcr.io/guim31/gladys-unraid:1.0.2",
   "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/guim31/gladys-unraid/main/cover.png",
   "categories": ["network"],
